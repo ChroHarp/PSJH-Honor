@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>平興國中｜歷屆獲獎資訊榮譽牆（依年度）</title>
+  <style>
+    :root { --bg:#f3efe6; --ink:#1f1f1f; --muted:rgba(0,0,0,.65);
+      --shadow:0 10px 22px rgba(0,0,0,.10); --shadow-soft:0 6px 14px rgba(0,0,0,.08); --radius:16px;
+      --tier-super-1:#7a0a0a; --tier-super-2:#d4a017; --tier-major-1:#b07b00; --tier-major-2:#f0d27a;
+      --tier-mid-1:#c9a75a; --tier-mid-2:#f2e2b3; --tier-normal:rgba(255,255,255,.62);
+    }
+    html,body{height:100%;background:var(--bg);color:var(--ink);
+      font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;margin:0;}
+    body::before{content:"";position:fixed;inset:0;pointer-events:none;
+      background:radial-gradient(1200px 700px at 20% 20%, rgba(0,0,0,.06), transparent 60%),
+                radial-gradient(900px 600px at 80% 0%, rgba(0,0,0,.05), transparent 55%),
+                radial-gradient(800px 700px at 70% 85%, rgba(0,0,0,.05), transparent 60%),
+                linear-gradient(0deg, rgba(255,255,255,.40), rgba(255,255,255,.10));
+      mix-blend-mode:multiply;opacity:.7;}
+    .wrap{position:relative;max-width:1600px;margin:0 auto;padding:28px 18px 28px;}
+    header{display:grid;gap:10px;margin-bottom:14px;}
+    .title{font-weight:900;letter-spacing:.02em;line-height:1.1;font-size:clamp(22px,2.8vw,44px);text-align:center;}
+    .subtitle{text-align:center;color:var(--muted);font-size:14px;line-height:1.5;}
+    .controls{display:grid;gap:10px;margin:14px auto 18px;max-width:980px;padding:14px;border:1px solid rgba(0,0,0,.10);
+      border-radius:var(--radius);background:rgba(255,255,255,.38);box-shadow:var(--shadow-soft);backdrop-filter:blur(6px);}
+    .controls-row{display:grid;grid-template-columns:1fr;gap:10px;}
+    @media(min-width:900px){.controls-row{grid-template-columns:1.2fr .8fr .8fr .8fr;align-items:center;}}
+    .control{display:grid;gap:6px;} label{font-size:12px;color:var(--muted);}
+    input[type="search"],select{padding:10px 12px;border-radius:12px;border:1px solid rgba(0,0,0,.16);background:rgba(255,255,255,.75);outline:none;font-size:14px;}
+    input[type="search"]:focus,select:focus{border-color:rgba(0,0,0,.32);box-shadow:0 0 0 4px rgba(0,0,0,.06);}
+    .toggles{display:flex;gap:14px;flex-wrap:wrap;align-items:center;padding-top:2px;}
+    .toggle{display:inline-flex;gap:8px;align-items:center;user-select:none;font-size:13px;color:var(--muted);}
+    .toggle input{width:16px;height:16px;accent-color:#8a6a12;}
+    .legend{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center;padding:2px 0 4px;color:var(--muted);font-size:12px;}
+    .dot{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid rgba(0,0,0,.10);background:rgba(255,255,255,.40);}
+    .swatch{width:10px;height:10px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.12);}
+    .swatch.super{background:linear-gradient(135deg,var(--tier-super-1),var(--tier-super-2));}
+    .swatch.major{background:linear-gradient(135deg,var(--tier-major-1),var(--tier-major-2));}
+    .swatch.mid{background:linear-gradient(135deg,var(--tier-mid-1),var(--tier-mid-2));}
+    .swatch.normal{background:rgba(255,255,255,.75);}
+    .board{border-radius:22px;border:1px solid rgba(0,0,0,.10);background:rgba(255,255,255,.18);box-shadow:var(--shadow);overflow:hidden;}
+    .years{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(260px,1fr);gap:14px;padding:18px;overflow-x:auto;scroll-snap-type:x mandatory;}
+    .years::-webkit-scrollbar{height:10px;} .years::-webkit-scrollbar-thumb{background:rgba(0,0,0,.18);border-radius:999px;}
+    .year{scroll-snap-align:start;border-radius:18px;background:rgba(255,255,255,.22);border:1px solid rgba(0,0,0,.10);
+      box-shadow:var(--shadow-soft);display:grid;grid-template-rows:auto 1fr;min-height:360px;}
+    .year-head{padding:14px 14px 8px;display:grid;gap:6px;}
+    .year-title{font-weight:900;font-size:18px;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:baseline;}
+    .year-count{font-size:12px;color:var(--muted);font-weight:700;}
+    .cards{padding:10px 12px 14px;display:grid;gap:10px;align-content:start;}
+    .card{border-radius:16px;border:1px solid rgba(0,0,0,.10);background:var(--tier-normal);padding:10px 10px 9px;
+      box-shadow:0 8px 16px rgba(0,0,0,.08);display:grid;gap:6px;position:relative;overflow:hidden;}
+    .card.tier-super{background:linear-gradient(135deg, rgba(122,10,10,.95), rgba(212,160,23,.90));border-color:rgba(0,0,0,.14);color:#fff;box-shadow:0 14px 26px rgba(0,0,0,.18);}
+    .card.tier-major{background:linear-gradient(135deg, rgba(176,123,0,.92), rgba(240,210,122,.92));border-color:rgba(0,0,0,.14);box-shadow:0 12px 22px rgba(0,0,0,.14);}
+    .card.tier-mid{background:linear-gradient(135deg, rgba(201,167,90,.76), rgba(242,226,179,.84));border-color:rgba(0,0,0,.12);}
+    .tag{display:inline-flex;align-items:center;gap:6px;width:fit-content;padding:4px 8px;border-radius:999px;font-size:12px;
+      border:1px solid rgba(0,0,0,.12);background:rgba(255,255,255,.55);color:rgba(0,0,0,.72);font-weight:800;}
+    .card.tier-super .tag{background:rgba(0,0,0,.25);border-color:rgba(255,255,255,.20);color:rgba(255,255,255,.92);}
+    .headline{font-weight:900;font-size:14px;line-height:1.25;letter-spacing:.01em;}
+    .sub{font-size:12.5px;line-height:1.35;color:rgba(0,0,0,.70);font-weight:650;}
+    .card.tier-super .sub{color:rgba(255,255,255,.90);}
+    .meta{font-size:12px;line-height:1.35;color:rgba(0,0,0,.64);}
+    .card.tier-super .meta{color:rgba(255,255,255,.86);}
+    .star{position:absolute;right:10px;top:10px;font-size:16px;opacity:.95;}
+    .card.tier-super .star{color:rgba(255,255,255,.95);} .card.tier-major .star{color:rgba(0,0,0,.80);}
+    .card.tier-mid .star{color:rgba(0,0,0,.60);} .card.tier-normal .star{display:none;}
+    .foot{text-align:center;color:var(--muted);font-size:12px;margin-top:12px;padding:8px 0 0;}
+    .empty{padding:14px;border-radius:16px;border:1px dashed rgba(0,0,0,.22);color:var(--muted);background:rgba(255,255,255,.40);font-size:13px;line-height:1.45;}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">平興國中數理資優歷屆獲獎資訊榮譽牆</div>
+      <div class="subtitle">平興國中數理資優班以及專題研究社歷屆獲獎紀錄</div>
+    </header>
+
+    <section class="controls" aria-label="filters">
+      <div class="controls-row">
+        <div class="control">
+          <label for="q">關鍵字（競賽 / 作品 / 參賽者 / 得獎內容）</label>
+          <input id="q" type="search" placeholder="例如：全國、IEYI、甲等、智慧小車、某位學生姓名…" />
+        </div>
+        <div class="control">
+          <label for="tag">類別</label>
+          <select id="tag"><option value="">全部</option></select>
+        </div>
+        <div class="control">
+          <label for="tier">強調等級</label>
+          <select id="tier">
+            <option value="">全部</option>
+            <option value="super">重要大獎（最高）</option>
+            <option value="major">重要大獎</option>
+            <option value="mid">中度強調</option>
+            <option value="normal">一般</option>
+          </select>
+        </div>
+        <div class="control">
+          <label for="jump">跳至年份</label>
+          <select id="jump"><option value="">（不跳轉）</option></select>
+        </div>
+      </div>
+
+      <div class="toggles">
+        <label class="toggle"><input id="showPeople" type="checkbox" checked />顯示參賽者</label>
+        <label class="toggle"><input id="collapseSmall" type="checkbox" />只看大獎（隱藏一般項目）</label>
+      </div>
+
+      <div class="legend" aria-label="legend">
+        <span class="dot"><span class="swatch super"></span>重要大獎（最高）</span>
+        <span class="dot"><span class="swatch major"></span>重要大獎</span>
+        <span class="dot"><span class="swatch mid"></span>中度強調</span>
+        <span class="dot"><span class="swatch normal"></span>一般</span>
+      </div>
+    </section>
+
+    <section class="board" aria-label="award wall">
+      <div id="years" class="years"></div>
+    </section>
+
+    <div class="foot">提示：橫向捲動可瀏覽所有年份；也可用「跳至年份」快速定位。</div>
+  </div>
+
+<script>
+  const AWARDS = [{"year": 2016, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "多功能折疊梳", "participants": "李安蕎、邱曉慧", "award_text": "桃園市甲等", "level": "桃園市", "prize": "甲等", "tier": "normal"}, {"year": 2016, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "空氣清淨安全帽", "participants": "湯奉璋、彭太相", "award_text": "桃園市佳作", "level": "桃園市", "prize": "佳作", "tier": "normal"}, {"year": 2016, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "行李摩擦器", "participants": "李安蕎、邱曉慧", "award_text": "桃園市甲等", "level": "桃園市", "prize": "甲等", "tier": "normal"}, {"year": 2016, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "防濺牛排盤", "participants": "張藝馨", "award_text": "IEYI銅牌", "level": "IEYI", "prize": "銅牌", "tier": "mid"}, {"year": 2016, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "防遺失之廁所掛勾", "participants": "廖恩莆、王荻羲、陳華嚴", "award_text": "IEYI銀牌", "level": "IEYI", "prize": "銀牌", "tier": "major"}, {"year": 2020, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "多功能飲料提袋", "participants": "李怡蓁、胡惠晴、黃政鴻", "award_text": "IEYI佳作", "level": "IEYI", "prize": "佳作", "tier": "normal"}, {"year": 2020, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "臨時保溫袋", "participants": "李冠霖、張宇杰", "award_text": "桃園市佳作", "level": "桃園市", "prize": "佳作", "tier": "normal"}, {"year": 2022, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "塵服於我", "participants": "倪沁政、唐羽加、吳旻原", "award_text": "世界銀牌", "level": "世界", "prize": "銀牌", "tier": "super"}, {"year": 2022, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "多功能震動提醒器", "participants": "蔡雨彤", "award_text": "全國佳作", "level": "全國", "prize": "佳作", "tier": "normal"}, {"year": 2023, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "夜路雨傘", "participants": "吳采潔", "award_text": "全國銅牌", "level": "全國", "prize": "銅牌", "tier": "mid"}, {"year": 2023, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "小衣架大智慧", "participants": "陳品程、林尹莘", "award_text": "全國銀牌", "level": "全國", "prize": "銀牌", "tier": "major"}, {"year": 2023, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "易開罐頭", "participants": "嚴立捷", "award_text": "全國佳作", "level": "全國", "prize": "佳作", "tier": "normal"}, {"year": 2023, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "腳踏車聲控變速器", "participants": "王宥崴", "award_text": "全國銅牌", "level": "全國", "prize": "銅牌", "tier": "mid"}, {"year": 2023, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "防燙鍋蓋", "participants": "王瑞恩", "award_text": "桃園市佳作", "level": "桃園市", "prize": "佳作", "tier": "normal"}, {"year": 2024, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "優Tube", "participants": "姜姵羽、黃新絜", "award_text": "全國賽佳作", "level": "全國", "prize": "佳作", "tier": "normal"}, {"year": 2024, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "過期管理零食櫃", "participants": "李姸均、黃于展、沈軒毅", "award_text": "全國賽銅牌", "level": "全國", "prize": "銅牌", "tier": "mid"}, {"year": 2025, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "智慧口罩盒", "participants": "龐羽彤", "award_text": "全國銅牌", "level": "全國", "prize": "銅牌", "tier": "mid"}, {"year": 2025, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "自己摺起來", "participants": "李紫晴", "award_text": "全國銅牌", "level": "全國", "prize": "銅牌", "tier": "mid"}, {"year": 2025, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "防割警示器", "participants": "温傑宇", "award_text": "桃園市佳作", "level": "桃園市", "prize": "佳作", "tier": "normal"}, {"year": 2026, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "智慧提醒櫃", "participants": "吳采薇 林少筠", "award_text": "桃園市特優", "level": "桃園市", "prize": "特優", "tier": "major"}, {"year": 2026, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "自動清洗籠", "participants": "吳昱穎", "award_text": "桃園市甲等", "level": "桃園市", "prize": "甲等", "tier": "mid"}, {"year": 2026, "group": "發明展/創客", "tag": "創客/發明", "competition": "IEYI 青少年創客發明成果展", "field": "", "project": "強植記憶急急樂", "participants": "盧映彤 顏楷恩", "award_text": "桃園市佳作", "level": "桃園市", "prize": "佳作", "tier": "normal"}, {"year": 2022, "group": "智慧小車", "tag": "AI小車", "competition": "START ! AI 智慧小車競賽", "field": "", "project": "救急剎車裝置", "participants": "彭翔禹、陳怡光", "award_text": "全國最佳技術獎", "level": "全國", "prize": "最佳技術獎", "tier": "normal"}, {"year": 2022, "group": "智慧小車", "tag": "AI小車", "competition": "START ! AI 智慧小車競賽", "field": "", "project": "智慧門", "participants": "林和萱、蔡雨彤", "award_text": "全國佳作", "level": "全國", "prize": "佳作", "tier": "mid"}, {"year": 2023, "group": "智慧小車", "tag": "AI小車", "competition": "START ! AI 智慧小車競賽", "field": "", "project": "競賽組-平興大車隊", "participants": "陳品程、陳治翰、吳威緒", "award_text": "全國最佳潛力獎", "level": "全國", "prize": "最佳潛力獎", "tier": "mid"}, {"year": 2017, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "化學", "project": "『白糖變黑蛇』三部曲-蛇砲的原理大解密", "participants": "顏子胤、曾祥峻、張仁德", "award_text": "桃園市第二名", "level": "桃園市", "prize": "第二名", "tier": "major"}, {"year": 2017, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "應用", "project": "粉來油去~澱粉對油脂吸收能力的探討", "participants": "李安蕎", "award_text": "桃園市第二名", "level": "桃園市", "prize": "第二名", "tier": "major"}, {"year": 2017, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "數學", "project": "87士兵團團轉", "participants": "王荻羲、彭太相", "award_text": "桃園市第二名", "level": "桃園市", "prize": "第二名", "tier": "major"},  {"year": 2017, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "數學", "project": "§雙三角‧終結者§", "participants": "邱曉慧、陳嘉妘", "award_text": "全國最佳教材獎", "level": "全國", "prize": "最佳教材獎", "tier": "major"}, {"year": 2017, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "物理", "project": "聲聲不息~閉管內的駐波探討", "participants": "廖恩莆", "award_text": "桃園市第二名", "level": "桃園市", "prize": "第二名", "tier": "major"}, {"year": 2018, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "化學", "project": "酸鹽酸語-探討酸遇碳酸鹽類反應速率的關係", "participants": "胡耕歷", "award_text": "桃園市第三名", "level": "桃園市", "prize": "第三名", "tier": "mid"}, {"year": 2018, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "應用", "project": "波光流轉-Ooho的光學性質探討", "participants": "李名安", "award_text": "桃園市第二名", "level": "桃園市", "prize": "第二名", "tier": "major"}, {"year": 2018, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "數學", "project": "§海盜的大難題", "participants": "陳珮萱", "award_text": "桃園市佳作", "level": "桃園市", "prize": "佳作", "tier": "normal"}, {"year": 2018, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "物理", "project": "Velocity V.S Sticky—探討速度和黏滯性的關係", "participants": "謝御軒", "award_text": "全國探究精神獎", "level": "全國", "prize": "探究精神獎", "tier": "major"}, {"year": 2018, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "物理", "project": "暢行無阻?-探討牛頓流體的阻力關係", "participants": "朱軒緯", "award_text": "桃園市第二名", "level": "桃園市", "prize": "第二名", "tier": "major"}, {"year": 2018, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "物理", "project": "深不可測?~液體折射率探討", "participants": "關羽捷、黃鑫", "award_text": "桃園市佳作", "level": "桃園市", "prize": "佳作", "tier": "normal"}, {"year": 2018, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "物理", "project": "聲意盎然~閉管駐波聲速的探討", "participants": "顏子胤", "award_text": "桃園市第二名", "level": "桃園市", "prize": "第二名", "tier": "major"}, {"year": 2018, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "生物", "project": "介殼蟲的生活史與植物間的依互關係", "participants": "葉承宗", "award_text": "平鎮區第三名", "level": "", "prize": "平鎮區第三名", "tier": "normal"}, {"year": 2019, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "化學", "project": "奇晶再現~探討天氣瓶的結晶速率", "participants": "邱世億", "award_text": "平鎮區第三名", "level": "", "prize": "平鎮區第三名", "tier": "normal"}, {"year": 2019, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "應用", "project": "碗盤亮晶晶-探究不同植物精油在清潔劑中的妙用", "participants": "朱家君", "award_text": "平鎮區第一名", "level": "", "prize": "平鎮區第一名", "tier": "normal"}, {"year": 2019, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "數學", "project": "這就視秘密", "participants": "王承皓、林宸安", "award_text": "桃園市第二名", "level": "桃園市", "prize": "第二名", "tier": "major"}, {"year": 2019, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "物理", "project": "想黏牽掛~探討不同液體的黏滯性關係", "participants": "黃鑫", "award_text": "桃園市第二名", "level": "桃園市", "prize": "第二名", "tier": "major"}, {"year": 2019, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "物理", "project": "有繩有水?~探討繩子的出水量關係", "participants": "黃奕達、宋樂", "award_text": "桃園市第三名", "level": "桃園市", "prize": "第三名", "tier": "mid"}, {"year": 2019, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "生物", "project": "強『熊』vs.PM2.5-細懸浮微粒汙染物對苔蘚生物相的影響", "participants": "林裕翔、林盟富", "award_text": "桃園市第二名", "level": "桃園市", "prize": "第二名", "tier": "major"}, {"year": 2020, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "數學", "project": "必勝雙三角", "participants": "李玟卉、劉宥慧", "award_text": "桃園市佳作", "level": "桃園市", "prize": "佳作", "tier": "normal"}, {"year": 2020, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "物理", "project": "光芒四射-探討光遇到塑膠膜其光學性質關係", "participants": "黃柏予、李怡蓁、胡惠晴", "award_text": "桃園市第一名", "level": "桃園市", "prize": "第一名", "tier": "major"}, {"year": 2020, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "物理", "project": "完美迫降-探討藍寶石玻璃的光學與抗摔性質", "participants": "王立騰", "award_text": "桃園市第三名", "level": "桃園市", "prize": "第三名", "tier": "mid"}, {"year": 2020, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "物理", "project": "滴水穿沙-沙子在液體中的阻力與運動關係", "participants": "陳聖全、蔡承瀚", "award_text": "平鎮區第三名", "level": "", "prize": "平鎮區第三名", "tier": "normal"}, {"year": 2020, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "生物", "project": "「精」神奕?抑?-左手香精油對小白菜種子萌發及幼苗發育的影響研究", "participants": "李永瀚、朱家君", "award_text": "桃園市第二名", "level": "桃園市", "prize": "第二名", "tier": "major"}, {"year": 2020, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "生科", "project": "線與面的境界變化-用函數畫3D", "participants": "蕭鼎軒", "award_text": "桃園市第三名", "level": "桃園市", "prize": "第三名", "tier": "mid"}, {"year": 2021, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "生物", "project": "時來『蘊』轉", "participants": "蔡宜庭、王巧伶", "award_text": "桃園市第二名", "level": "桃園市", "prize": "第二名", "tier": "major"}, {"year": 2022, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "化學", "project": "喝可樂就快樂\n探究可樂主要成分含量之研究", "participants": "彭鼎硯、劉姿妤", "award_text": "桃園市第三名", "level": "桃園市", "prize": "第三名", "tier": "mid"}, {"year": 2022, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "物理", "project": "細胞質流的物理學初探", "participants": "許博勛", "award_text": "桃園市第一名", "level": "桃園市", "prize": "第一名", "tier": "major"}, {"year": 2022, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "生物", "project": "蘊轉手之鍊", "participants": "蔡宜庭", "award_text": "全國探究精神獎", "level": "全國", "prize": "探究精神獎", "tier": "major"}, {"year": 2022, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "生科", "project": "餐廳裡的IOT-無接觸送餐車", "participants": "林和萱", "award_text": "桃園市第三名", "level": "桃園市", "prize": "第三名", "tier": "mid"}, {"year": 2024, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "化工", "project": "冷暖視知", "participants": "王瑞恩 陳圓蓉", "award_text": "聯發科超越無限特優", "level": "全國", "prize": "聯發科超越無限特優", "tier": "super"}, {"year": 2024, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "生物", "project": "葉!來玩拼圖", "participants": "莊岷恩", "award_text": "桃園市第三名", "level": "桃園市", "prize": "第三名", "tier": "mid"}, {"year": 2024, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "數學", "project": "奧秘包絡線", "participants": "陳治翰", "award_text": "桃園市佳作", "level": "桃園市", "prize": "佳作", "tier": "mid"}, {"year": 2024, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "數學", "project": "感染方塊", "participants": "黃霆宇", "award_text": "桃園市佳作", "level": "桃園市", "prize": "佳作", "tier": "mid"}, {"year": 2025, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "化工", "project": "望”桃”興”炭”-\n自製生物炭批次反應淨水槽", "participants": "李姸均 沈軒毅", "award_text": "全國第三名", "level": "全國", "prize": "第三名", "tier": "super"}, {"year": 2025, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "生物", "project": "樹之精靈-鐘乳體的基本特性\n影像分析與生態角色探究", "participants": "姜姵羽 温欣庭", "award_text": "桃園市第一名", "level": "桃園市", "prize": "第一名", "tier": "major"}, {"year": 2025, "group": "科展", "tag": "科展", "competition": "中華民國中小學科學展覽會", "field": "數學", "project": "感染圖騰", "participants": "黃于展", "award_text": "桃園市第二名", "level": "桃園市", "prize": "第二名", "tier": "major"}, {"year": 2022, "group": "專題研究", "tag": "專題", "competition": "桃園市專題研究競賽", "field": "", "project": "媒體『食』讀", "participants": "蔡宜庭、彭婕茹、龐惟羲、林尹莘", "award_text": "桃園市優等獎", "level": "桃園市", "prize": "優等獎", "tier": "mid"}, {"year": 2023, "group": "專題研究", "tag": "專題", "competition": "桃園市專題研究競賽", "field": "", "project": "乙未同心盡在平興- 『義』起教遊趣", "participants": "蔡定洲、莊英悅、沈車承軒、廖宏晏", "award_text": "桃園市優等獎", "level": "桃園市", "prize": "優等獎", "tier": "mid"}, {"year": 2024, "group": "專題研究", "tag": "專題", "competition": "桃園市專題研究競賽", "field": "", "project": "一島同心-為兒童而語、為環境而行", "participants": "黃新絜、姜姵羽、蔡定芳、張俐苓", "award_text": "桃園市特優獎", "level": "桃園市", "prize": "特優獎", "tier": "major"}, {"year": 2017, "group": "學科/其他競賽", "tag": "學科", "competition": "學科競賽", "field": "自然", "project": "國中自然科學奧林匹亞競賽", "participants": "張藝馨、廖恩莆、王荻羲", "award_text": "桃園市佳作", "level": "桃園市", "prize": "佳作", "tier": "normal"}, {"year": 2017, "group": "學科/其他競賽", "tag": "學科", "competition": "學科競賽", "field": "數學", "project": "JHMC 國中數學競賽競賽", "participants": "廖恩莆、李安蕎、王荻羲、張藝馨", "award_text": "台北團體優良獎", "level": "台北", "prize": "團體優良獎", "tier": "normal"}, {"year": 2017, "group": "學科/其他競賽", "tag": "學科", "competition": "學科競賽", "field": "自然", "project": "國中自然科學奧林匹亞競賽", "participants": "李安蕎", "award_text": "桃園市銅牌", "level": "桃園市", "prize": "銅牌", "tier": "mid"}, {"year": 2018, "group": "學科/其他競賽", "tag": "學科", "competition": "學科競賽", "field": "數學", "project": "JHMC 國中數學競賽競賽", "participants": "陳珮萱", "award_text": "台北個人優良獎", "level": "台北", "prize": "個人優良獎", "tier": "normal"}, {"year": 2018, "group": "學科/其他競賽", "tag": "學科", "competition": "學科競賽", "field": "數學", "project": "JHMC 國中數學競賽競賽", "participants": "葉承宗、顏子胤、陳珮萱、王承皓", "award_text": "台北團體優良獎", "level": "台北", "prize": "團體優良獎", "tier": "normal"}, {"year": 2019, "group": "學科/其他競賽", "tag": "學科", "competition": "學科競賽", "field": "數學", "project": "JHMC 國中數學競賽競賽", "participants": "王承皓", "award_text": "台北個人二等獎", "level": "台北", "prize": "個人二等獎", "tier": "major"}, {"year": 2019, "group": "學科/其他競賽", "tag": "學科", "competition": "學科競賽", "field": "數學", "project": "JHMC 國中數學競賽競賽", "participants": "關羽捷", "award_text": "台北個人三等獎", "level": "台北", "prize": "個人三等獎", "tier": "mid"}, {"year": 2019, "group": "學科/其他競賽", "tag": "學科", "competition": "學科競賽", "field": "數學", "project": "JHMC 國中數學競賽競賽", "participants": "王承皓、林宸安、邱世億、關羽捷", "award_text": "台北團體優良獎", "level": "台北", "prize": "團體優良獎", "tier": "normal"}, {"year": 2019, "group": "學科/其他競賽", "tag": "學科", "competition": "學科競賽", "field": "數學", "project": "桃園市生活科技創意競賽", "participants": "王承皓、邱世億、宋樂", "award_text": "最佳精品獎", "level": "", "prize": "最佳精品獎", "tier": "normal"}, {"year": 2020, "group": "學科/其他競賽", "tag": "學科", "competition": "學科競賽", "field": "數學", "project": "JHMC 國中數學競賽競賽", "participants": "黃柏予", "award_text": "台北個人一等獎", "level": "台北", "prize": "個人一等獎", "tier": "super"}, {"year": 2020, "group": "學科/其他競賽", "tag": "學科", "competition": "學科競賽", "field": "數學", "project": "JHMC 國中數學競賽競賽", "participants": "李永瀚、盧廷暉、李玟卉、黃柏予", "award_text": "台北團體優良獎", "level": "台北", "prize": "團體優良獎", "tier": "normal"}, {"year": 2020, "group": "學科/其他競賽", "tag": "學科", "competition": "學科競賽", "field": "生科", "project": "桃園市生活科技創意競賽", "participants": "彭翔禹、蔡雨彤、彭鼎硯", "award_text": "最佳創意獎", "level": "", "prize": "最佳創意獎", "tier": "normal"}, {"year": 2021, "group": "學科/其他競賽", "tag": "學科", "competition": "學科競賽", "field": "數學", "project": "JHMC 國中數學競賽競賽", "participants": "陳孝傑", "award_text": "台北個人優良獎", "level": "台北", "prize": "個人優良獎", "tier": "normal"}, {"year": 2021, "group": "學科/其他競賽", "tag": "學科", "competition": "學科競賽", "field": "數學", "project": "JHMC 國中數學競賽競賽", "participants": "陳孝傑、郭家芸、張宇杰、蔡雨彤", "award_text": "台北團體優良獎", "level": "台北", "prize": "團體優良獎", "tier": "normal"}, {"year": 2022, "group": "學科/其他競賽", "tag": "學科", "competition": "學科競賽", "field": "數學", "project": "JHMC 國中數學競賽競賽", "participants": "林和萱、蔡雨彤", "award_text": "台北個人優良獎", "level": "台北", "prize": "個人優良獎", "tier": "normal"}, {"year": 2022, "group": "學科/其他競賽", "tag": "學科", "competition": "學科競賽", "field": "數學", "project": "JHMC 國中數學競賽競賽", "participants": "蔡雨彤、林和萱、蔡宜庭、彭翔禹", "award_text": "台北團體三等獎", "level": "台北", "prize": "團體三等獎", "tier": "major"}, {"year": 2023, "group": "學科/其他競賽", "tag": "學科", "competition": "學科競賽", "field": "數學", "project": "JHMC 國中數學競賽競賽", "participants": "李宥勳", "award_text": "台北個人優良獎", "level": "台北", "prize": "個人優良獎", "tier": "normal"}, {"year": 2023, "group": "學科/其他競賽", "tag": "學科", "competition": "學科競賽", "field": "數學", "project": "JHMC 國中數學競賽競賽", "participants": "李宥勳、許博勛、黃霆宇、陳治翰", "award_text": "台北團體優良獎", "level": "台北", "prize": "團體優良獎", "tier": "normal"}, {"year": 2024, "group": "學科/其他競賽", "tag": "學科", "competition": "學科競賽", "field": "數學", "project": "JHMC 國中數學競賽競賽", "participants": "黃霆宇 陳治翰", "award_text": "台北個人三等獎", "level": "台北", "prize": "個人三等獎", "tier": "mid"}, {"year": 2024, "group": "學科/其他競賽", "tag": "學科", "competition": "學科競賽", "field": "數學", "project": "JHMC 國中數學競賽競賽", "participants": "黃霆宇、陳治翰、王瑞恩、黃于展", "award_text": "台北團體優良獎", "level": "台北", "prize": "團體優良獎", "tier": "normal"}];
+  const YEARS = [2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
+
+  const uniqTags = Array.from(new Set(AWARDS.map(a => a.tag))).sort((a,b)=>a.localeCompare(b,'zh-Hant'));
+  const tagSel = document.getElementById('tag');
+  uniqTags.forEach(t => { const opt=document.createElement('option'); opt.value=t; opt.textContent=t; tagSel.appendChild(opt); });
+
+  const jumpSel = document.getElementById('jump');
+  YEARS.forEach(y => { const opt=document.createElement('option'); opt.value=String(y); opt.textContent=String(y); jumpSel.appendChild(opt); });
+
+  const state = { q:"", tag:"", tier:"", showPeople:true, collapseSmall:false };
+
+  function normalize(s){ return (s||"").toString().trim().toLowerCase(); }
+  function matchesQuery(a,q){
+    if(!q) return true;
+    const hay=[a.year,a.tag,a.group,a.competition,a.field,a.project,a.participants,a.award_text,a.level,a.prize].join(" ");
+    return normalize(hay).includes(normalize(q));
+  }
+  function tierRank(t){ if(t==='super') return 4; if(t==='major') return 3; if(t==='mid') return 2; return 1; }
+  function escapeHtml(str){
+    return (str ?? "").toString()
+      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;").replaceAll("'","&#39;");
+  }
+
+  function render(){
+    const wrap=document.getElementById('years');
+    wrap.innerHTML="";
+
+    const filtered=AWARDS.filter(a=>{
+      if(!matchesQuery(a,state.q)) return false;
+      if(state.tag && a.tag!==state.tag) return false;
+      if(state.tier && a.tier!==state.tier) return false;
+      if(state.collapseSmall && a.tier==='normal') return false;
+      return true;
+    });
+
+    const byYear=new Map();
+    YEARS.forEach(y=>byYear.set(y,[]));
+    filtered.forEach(a=>{ if(!byYear.has(a.year)) byYear.set(a.year,[]); byYear.get(a.year).push(a); });
+
+    for(const y of YEARS){
+      const col=document.createElement('section');
+      col.className="year"; col.id="year-"+y;
+
+      const list=(byYear.get(y)||[]).slice().sort((a,b)=>{
+        const tr=tierRank(b.tier)-tierRank(a.tier);
+        if(tr!==0) return tr;
+        return (a.competition||"").localeCompare((b.competition||""),'zh-Hant');
+      });
+
+      const head=document.createElement('div');
+      head.className="year-head";
+      head.innerHTML=`<div class="year-title"><span>【${y}】</span><span class="year-count">${list.length} 筆</span></div>`;
+      col.appendChild(head);
+
+      const cards=document.createElement('div');
+      cards.className="cards";
+
+      if(list.length===0){
+        const empty=document.createElement('div');
+        empty.className="empty";
+        empty.textContent="（目前篩選條件下，此年度沒有符合的項目）";
+        cards.appendChild(empty);
+      }else{
+        for(const a of list){
+          const c=document.createElement('article');
+          c.className="card tier-"+a.tier;
+
+          const star=(a.tier==='super')?"★":(a.tier==='major')?"★":(a.tier==='mid')?"☆":"";
+          const headline=a.competition||"(未填競賽名稱)";
+          const parts=[];
+          if(a.project) parts.push(a.project);
+          if(a.field) parts.push(a.field);
+          const sub=parts.join("｜");
+
+          const awardLine=[a.award_text,a.level].filter(Boolean).join("（") + (a.level ? "）" : "");
+          const people=(state.showPeople && a.participants) ? `<div class="meta">參賽者：${escapeHtml(a.participants)}</div>` : "";
+
+          c.innerHTML=`
+            <div class="star">${star}</div>
+            <div class="tag">${escapeHtml(a.tag)}</div>
+            <div class="headline">${escapeHtml(headline)}</div>
+            ${sub ? `<div class="sub">${escapeHtml(sub)}</div>` : ``}
+            <div class="meta">${escapeHtml(awardLine || "")}</div>
+            ${people}
+          `;
+          cards.appendChild(c);
+        }
+      }
+
+      col.appendChild(cards);
+      wrap.appendChild(col);
+    }
+  }
+
+  const q=document.getElementById('q');
+  const tier=document.getElementById('tier');
+  const showPeople=document.getElementById('showPeople');
+  const collapseSmall=document.getElementById('collapseSmall');
+
+  q.addEventListener('input',e=>{ state.q=e.target.value||""; render(); });
+  tagSel.addEventListener('change',e=>{ state.tag=e.target.value||""; render(); });
+  tier.addEventListener('change',e=>{ state.tier=e.target.value||""; render(); });
+  showPeople.addEventListener('change',e=>{ state.showPeople=!!e.target.checked; render(); });
+  collapseSmall.addEventListener('change',e=>{ state.collapseSmall=!!e.target.checked; render(); });
+  jumpSel.addEventListener('change',e=>{ const y=e.target.value; if(!y) return; const el=document.getElementById('year-'+y); if(el) el.scrollIntoView({behavior:"smooth", inline:"start"}); });
+
+  render();
+</script>
+</body>
+</html>
