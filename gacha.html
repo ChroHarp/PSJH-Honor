@@ -551,4 +551,62 @@
 
                 reveal.classList.add('show');
 
-                // --- 核心更新：計算名單高度，決定是否啟動往復滑動動畫
+                // --- 核心更新：計算名單高度，決定是否啟動往復滑動動畫 ---
+                setTimeout(() => {
+                    const windowEl = document.getElementById('names-window');
+                    const overage = namesContainer.scrollHeight - windowEl.clientHeight;
+                    
+                    if (overage > 0) {
+                        // 告訴 CSS 需要往上滾動多遠
+                        namesContainer.style.setProperty('--scroll-dist', `-${overage}px`);
+                        // 根據超出長度自動計算動畫秒數 (確保捲動速度適中)，最短 3 秒
+                        const duration = Math.max(3, overage / 30); 
+                        // 套用動畫：延遲 1 秒後開始，前後會有短暫停留，無限來回
+                        namesContainer.style.animation = `pingPongScroll ${duration}s ease-in-out 1s infinite alternate`;
+                    }
+                }, 550); // 等待撕紙外框彈出的縮放動畫 (0.5s) 結束後，再準確抓取高度
+                // ----------------------------------------------------
+
+                addToHistory(winners);
+                updateRemainingCount();
+                
+                setTimeout(() => {
+                    isAnimating = false;
+                }, 500);
+
+            }, 1100); 
+
+        }, 1500); 
+    }
+
+    function addToHistory(winners) {
+        const historyList = document.getElementById('history-list');
+        winners.forEach(w => {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.innerText = `${w.group} | ${w.name}`;
+            historyList.insertBefore(item, historyList.firstChild);
+        });
+    }
+
+    function clearHistory() {
+        if (isAnimating) return;
+        if (confirm("確定要清除所有抽籤紀錄嗎？這將重置所有學生的抽籤狀態。")) {
+            students.forEach(s => s.drawn = false);
+            document.getElementById('history-list').innerHTML = '';
+            document.getElementById('result-reveal').classList.remove('show');
+            document.getElementById('sunburst').style.display = 'none';
+            document.getElementById('drawn-names').style.animation = 'none';
+            updateRemainingCount();
+        }
+    }
+
+    document.getElementById('btn-draw').addEventListener('click', drawLots);
+    document.getElementById('btn-clear').addEventListener('click', clearHistory);
+
+    parseData();
+    initUI();
+</script>
+
+</body>
+</html>
