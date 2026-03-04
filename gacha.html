@@ -208,13 +208,17 @@
             left: 50%;
             transform: translate(-50%, -50%) scale(0);
             background-color: #fff;
-            padding: 20px 40px;
+            padding: 25px 50px;
             z-index: 10;
             text-align: center;
+            max-height: 85%; /* 防止紙條超出動畫區 */
+            display: flex;
+            flex-direction: column;
+            width: 250px;
             /* 模擬撕紙邊緣 */
             clip-path: polygon(
-                0% 5%, 5% 0%, 10% 8%, 15% 2%, 20% 7%, 25% 0%, 30% 6%, 35% 2%, 40% 9%, 45% 1%, 50% 6%, 55% 2%, 60% 8%, 65% 1%, 70% 7%, 75% 0%, 80% 5%, 85% 2%, 90% 8%, 95% 1%, 100% 5%,
-                100% 95%, 95% 100%, 90% 92%, 85% 98%, 80% 95%, 75% 100%, 70% 93%, 65% 99%, 60% 92%, 55% 98%, 50% 94%, 45% 99%, 40% 91%, 35% 98%, 30% 94%, 25% 100%, 20% 93%, 15% 98%, 10% 92%, 5% 100%, 0% 95%
+                0% 2%, 5% 0%, 10% 4%, 15% 1%, 20% 3%, 25% 0%, 30% 3%, 35% 1%, 40% 4%, 45% 0%, 50% 3%, 55% 1%, 60% 4%, 65% 0%, 70% 3%, 75% 0%, 80% 2%, 85% 1%, 90% 4%, 95% 0%, 100% 2%,
+                100% 98%, 95% 100%, 90% 96%, 85% 99%, 80% 97%, 75% 100%, 70% 96%, 65% 99%, 60% 96%, 55% 99%, 50% 97%, 45% 99%, 40% 96%, 35% 99%, 30% 97%, 25% 100%, 20% 96%, 15% 99%, 10% 96%, 5% 100%, 0% 98%
             );
             transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             border: 2px solid rgba(0,0,0,0.1);
@@ -225,17 +229,35 @@
         }
 
         .result-reveal h2 {
-            margin: 0;
+            margin: 0 0 10px 0;
             color: var(--primary-blue);
-            font-size: 2rem;
+            font-size: 1.8rem;
             letter-spacing: 1px;
+            flex-shrink: 0;
         }
 
-        .result-reveal .drawn-names {
-            font-size: 1.5rem;
+        /* 新增：滑動視窗限制區塊 */
+        .names-window {
+            overflow: hidden;
+            flex-grow: 1;
+            position: relative;
+            /* 讓上下邊緣有淡淡的漸層消失效果，看起來更像印刷機滾動的紙捲 */
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+            mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+        }
+
+        .drawn-names {
+            font-size: 1.4rem;
             font-weight: bold;
             color: var(--primary-orange);
-            margin-top: 10px;
+            padding: 20px 0; /* 預留上下滾動空間 */
+            position: relative;
+        }
+
+        /* 新增：CSS 動態往復滾動動畫 */
+        @keyframes pingPongScroll {
+            0%, 15% { transform: translateY(0); }
+            85%, 100% { transform: translateY(var(--scroll-dist)); }
         }
 
         /* 放射狀光芒 (爆開效果) */
@@ -335,7 +357,7 @@
 <body>
 
 <div class="container">
-    <h1>✂️ 復古扭蛋抽籤機</h1>
+    <h1>✂️ 平興數枝扭蛋抽籤機</h1>
 
     <div class="controls">
         <div class="checkbox-group" id="group-checkboxes">
@@ -343,7 +365,7 @@
         
         <div class="input-group">
             <label for="draw-count">抽出人數:</label>
-            <input type="number" id="draw-count" value="1" min="1" max="10">
+            <input type="number" id="draw-count" value="1" min="1" max="15">
         </div>
 
         <button class="btn" id="btn-draw">開始抽籤 (DRAW)</button>
@@ -364,7 +386,9 @@
         
         <div class="result-reveal" id="result-reveal">
             <h2>🎉 中獎名單 🎉</h2>
-            <div class="drawn-names" id="drawn-names"></div>
+            <div class="names-window" id="names-window">
+                <div class="drawn-names" id="drawn-names"></div>
+            </div>
         </div>
     </div>
 
@@ -412,7 +436,6 @@
     // 解析資料
     function parseData() {
         const lines = rawData.trim().split('\n');
-        // 跳過標題行
         for (let i = 1; i < lines.length; i++) {
             const [group, classNum, seatNum, name] = lines[i].split('\t');
             if (group && name) {
@@ -431,13 +454,12 @@
     // 初始化 UI
     function initUI() {
         const checkboxContainer = document.getElementById('group-checkboxes');
-        // 依照資料自動產生分組核取框
         Array.from(groups).sort().forEach(group => {
             const label = document.createElement('label');
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.value = group;
-            checkbox.checked = true; // 預設全選
+            checkbox.checked = true;
             checkbox.addEventListener('change', updateRemainingCount);
             
             label.appendChild(checkbox);
@@ -453,7 +475,6 @@
         return students.filter(s => selectedGroups.includes(s.group) && !s.drawn);
     }
 
-    // 更新剩餘人數顯示
     function updateRemainingCount() {
         const available = getAvailableStudents().length;
         document.getElementById('remaining-count').innerText = `剩餘人數: ${available}`;
@@ -470,7 +491,6 @@
         }
 
         const availableStudents = getAvailableStudents();
-        
         if (availableStudents.length === 0) {
             alert("目前選擇的分組已經沒有未抽出的學生了！請勾選其他組別或清除紀錄。");
             return;
@@ -481,11 +501,9 @@
             alert(`注意：所選分組僅剩 ${availableStudents.length} 人，將全數抽出。`);
         }
 
-        // 開始抽籤（洗牌並選出）
         let shuffled = [...availableStudents].sort(() => 0.5 - Math.random());
         let winners = shuffled.slice(0, drawCount);
 
-        // 標記為已抽出
         winners.forEach(w => {
             const index = students.findIndex(s => s.name === w.name && s.group === w.group);
             if (index !== -1) students[index].drawn = true;
@@ -504,18 +522,19 @@
         const sunburst = document.getElementById('sunburst');
         const namesContainer = document.getElementById('drawn-names');
 
-        // 隱藏上一次的結果
         reveal.classList.remove('show');
         sunburst.style.display = 'none';
         ball.style.display = 'none';
         ball.style.animation = 'none';
+        
+        // 進入前先取消原本的滑動動畫
+        namesContainer.style.animation = 'none';
+        namesContainer.style.transform = 'translateY(0)';
 
-        // 1. 機器震動 & 轉動旋鈕
         machine.classList.add('animating-machine');
         knob.classList.add('animating-knob');
 
         setTimeout(() => {
-            // 2. 掉出扭蛋
             machine.classList.remove('animating-machine');
             knob.classList.remove('animating-knob');
             
@@ -523,63 +542,13 @@
             ball.style.animation = 'dropBall 1s forwards cubic-bezier(0.25, 1, 0.5, 1)';
 
             setTimeout(() => {
-                // 3. 扭蛋爆開，顯示撕紙與放射光芒
                 ball.style.display = 'none';
                 sunburst.style.display = 'block';
                 
-                // 準備中獎名單文字
                 namesContainer.innerHTML = winners.map(w => 
-                    `<div>${w.group} - ${w.classNum}班 ${w.seatNum}號 <br> <span style="font-size: 2rem;">${w.name}</span></div>`
+                    `<div>${w.group} - ${w.classNum}班 ${w.seatNum}號 <br> <span style="font-size: 1.8rem;">${w.name}</span></div>`
                 ).join('<hr style="border-top: 2px dashed #111; margin: 10px 0;">');
 
                 reveal.classList.add('show');
 
-                // 4. 新增至歷史紀錄
-                addToHistory(winners);
-                updateRemainingCount();
-                
-                // 稍微延遲後解除鎖定，讓使用者可以進行下一次抽籤
-                setTimeout(() => {
-                    isAnimating = false;
-                }, 500);
-
-            }, 1100); // 等待扭蛋掉落動畫結束
-
-        }, 1500); // 機器震動時間
-    }
-
-    // 新增歷史紀錄 UI
-    function addToHistory(winners) {
-        const historyList = document.getElementById('history-list');
-        winners.forEach(w => {
-            const item = document.createElement('div');
-            item.className = 'history-item';
-            item.innerText = `${w.group} | ${w.name}`;
-            // 插入到最前面
-            historyList.insertBefore(item, historyList.firstChild);
-        });
-    }
-
-    // 清除紀錄
-    function clearHistory() {
-        if (isAnimating) return;
-        if (confirm("確定要清除所有抽籤紀錄嗎？這將重置所有學生的抽籤狀態。")) {
-            students.forEach(s => s.drawn = false);
-            document.getElementById('history-list').innerHTML = '';
-            document.getElementById('result-reveal').classList.remove('show');
-            document.getElementById('sunburst').style.display = 'none';
-            updateRemainingCount();
-        }
-    }
-
-    // 綁定事件
-    document.getElementById('btn-draw').addEventListener('click', drawLots);
-    document.getElementById('btn-clear').addEventListener('click', clearHistory);
-
-    // 啟動程式
-    parseData();
-    initUI();
-</script>
-
-</body>
-</html>
+                // --- 核心更新：計算名單高度，決定是否啟動往復滑動動畫
