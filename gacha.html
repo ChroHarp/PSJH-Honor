@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>復古拼貼扭蛋抽籤機</title>
+    <title>平興數枝扭蛋機</title>
     <style>
         /* 復古拼貼賽博龐克 & 混合媒介風格 */
         :root {
@@ -131,7 +131,7 @@
 
         /* 扭蛋機動畫區 */
         .gacha-area {
-            height: 300px;
+            height: 600px; /* ★ 高度提高到 600px */
             border: var(--border-thick);
             background-color: #fff;
             position: relative;
@@ -167,6 +167,17 @@
             overflow: hidden;
         }
 
+        /* ★ 新增：內部裝飾用小扭蛋 */
+        .deco-ball {
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            border: 2px solid var(--black);
+            border-radius: 50%;
+            /* 加上內陰影讓它更立體 */
+            box-shadow: inset -5px -5px 0px rgba(0,0,0,0.2);
+        }
+
         .knob {
             width: 40px;
             height: 40px;
@@ -183,7 +194,7 @@
             width: 10px;
             height: 40px;
             background-color: var(--black);
-            left: 15px;
+            left: 13px;
             top: -4px;
         }
 
@@ -236,12 +247,12 @@
             flex-shrink: 0;
         }
 
-        /* 新增：滑動視窗限制區塊 */
+        /* 滑動視窗限制區塊 */
         .names-window {
             overflow: hidden;
             flex-grow: 1;
             position: relative;
-            /* 讓上下邊緣有淡淡的漸層消失效果，看起來更像印刷機滾動的紙捲 */
+            /* 讓上下邊緣有淡淡的漸層消失效果 */
             -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
             mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
         }
@@ -250,11 +261,11 @@
             font-size: 1.4rem;
             font-weight: bold;
             color: var(--primary-orange);
-            padding: 20px 0; /* 預留上下滾動空間 */
+            padding: 20px 0; 
             position: relative;
         }
 
-        /* 新增：CSS 動態往復滾動動畫 */
+        /* CSS 動態往復滾動動畫 */
         @keyframes pingPongScroll {
             0%, 15% { transform: translateY(0); }
             85%, 100% { transform: translateY(var(--scroll-dist)); }
@@ -325,7 +336,7 @@
         @keyframes dropBall {
             0% { top: 30%; left: 50%; transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
             20% { opacity: 1; }
-            100% { top: 80%; left: 50%; transform: translate(-50%, -50%) scale(1) rotate(360deg); }
+            100% { top: 75%; left: 50%; transform: translate(-50%, -50%) scale(1) rotate(360deg); } /* 因為高度變高，微調掉落終點比例 */
         }
 
         @keyframes rotate {
@@ -338,9 +349,26 @@
             100% { transform: scale(1); }
         }
 
+        /* ★ 新增：小扭蛋瘋狂彈跳的 Keyframes */
+        @keyframes bounce1 {
+            0%, 100% { transform: translate(0, 0); }
+            33% { transform: translate(25px, -45px) rotate(45deg); }
+            66% { transform: translate(40px, -15px) rotate(90deg); }
+        }
+        @keyframes bounce2 {
+            0%, 100% { transform: translate(0, 0); }
+            33% { transform: translate(-30px, -40px) rotate(-45deg); }
+            66% { transform: translate(-15px, -55px) rotate(-90deg); }
+        }
+        @keyframes bounce3 {
+            0%, 100% { transform: translate(0, 0); }
+            33% { transform: translate(-20px, -50px) rotate(60deg); }
+            66% { transform: translate(20px, -20px) rotate(120deg); }
+        }
+
         .animating-machine {
             animation: shake 0.5s;
-            animation-iteration-count: 3;
+            animation-iteration-count: 3; /* 震動 1.5 秒 */
         }
         
         .animating-knob {
@@ -352,12 +380,19 @@
             animation: dropBall 1s forwards;
         }
 
+        /* 當玻璃罩加上 .animating-balls 時，裡面的小球開始亂跳 */
+        .animating-balls .ball-1 { animation: bounce1 0.35s infinite ease-in-out; }
+        .animating-balls .ball-2 { animation: bounce2 0.28s infinite ease-in-out; }
+        .animating-balls .ball-3 { animation: bounce3 0.32s infinite ease-in-out; }
+        .animating-balls .ball-4 { animation: bounce2 0.40s infinite ease-in-out reverse; }
+        .animating-balls .ball-5 { animation: bounce1 0.30s infinite ease-in-out reverse; }
+
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>✂️ 平興數枝扭蛋抽籤機</h1>
+    <h1>✂️ 平興數枝扭蛋機</h1>
 
     <div class="controls">
         <div class="checkbox-group" id="group-checkboxes">
@@ -375,10 +410,12 @@
     <div class="gacha-area">
         <div class="sunburst" id="sunburst"></div>
         <div class="machine" id="machine">
-            <div class="machine-glass">
-                <div style="position:absolute; width:30px; height:30px; background:red; border:2px solid #000; border-radius:50%; top:60px; left:10px;"></div>
-                <div style="position:absolute; width:30px; height:30px; background:blue; border:2px solid #000; border-radius:50%; top:70px; left:40px;"></div>
-                <div style="position:absolute; width:30px; height:30px; background:yellow; border:2px solid #000; border-radius:50%; top:50px; left:60px;"></div>
+            <div class="machine-glass" id="machine-glass">
+                <div class="deco-ball ball-1" style="background:#ff5252; top:70px; left:10px;"></div>
+                <div class="deco-ball ball-2" style="background:#448aff; top:75px; left:40px;"></div>
+                <div class="deco-ball ball-3" style="background:#ffeb3b; top:65px; left:70px;"></div>
+                <div class="deco-ball ball-4" style="background:#4caf50; top:80px; left:25px;"></div>
+                <div class="deco-ball ball-5" style="background:#9c27b0; top:80px; left:55px;"></div>
             </div>
             <div class="knob" id="knob"></div>
         </div>
@@ -516,6 +553,7 @@
     function playAnimation(winners) {
         isAnimating = true;
         const machine = document.getElementById('machine');
+        const machineGlass = document.getElementById('machine-glass'); // 取得玻璃罩元素
         const knob = document.getElementById('knob');
         const ball = document.getElementById('gacha-ball');
         const reveal = document.getElementById('result-reveal');
@@ -531,12 +569,16 @@
         namesContainer.style.animation = 'none';
         namesContainer.style.transform = 'translateY(0)';
 
+        // 啟動機器震動與內部扭蛋彈跳
         machine.classList.add('animating-machine');
         knob.classList.add('animating-knob');
+        machineGlass.classList.add('animating-balls'); // ★ 觸發小球彈跳
 
         setTimeout(() => {
+            // 停止機器震動與內部扭蛋彈跳
             machine.classList.remove('animating-machine');
             knob.classList.remove('animating-knob');
+            machineGlass.classList.remove('animating-balls'); // ★ 停止小球彈跳
             
             ball.style.display = 'block';
             ball.style.animation = 'dropBall 1s forwards cubic-bezier(0.25, 1, 0.5, 1)';
@@ -551,21 +593,17 @@
 
                 reveal.classList.add('show');
 
-                // --- 核心更新：計算名單高度，決定是否啟動往復滑動動畫 ---
+                // 計算名單高度，決定是否啟動往復滑動動畫
                 setTimeout(() => {
                     const windowEl = document.getElementById('names-window');
                     const overage = namesContainer.scrollHeight - windowEl.clientHeight;
                     
                     if (overage > 0) {
-                        // 告訴 CSS 需要往上滾動多遠
                         namesContainer.style.setProperty('--scroll-dist', `-${overage}px`);
-                        // 根據超出長度自動計算動畫秒數 (確保捲動速度適中)，最短 3 秒
                         const duration = Math.max(3, overage / 30); 
-                        // 套用動畫：延遲 1 秒後開始，前後會有短暫停留，無限來回
                         namesContainer.style.animation = `pingPongScroll ${duration}s ease-in-out 1s infinite alternate`;
                     }
-                }, 550); // 等待撕紙外框彈出的縮放動畫 (0.5s) 結束後，再準確抓取高度
-                // ----------------------------------------------------
+                }, 550); 
 
                 addToHistory(winners);
                 updateRemainingCount();
@@ -576,7 +614,7 @@
 
             }, 1100); 
 
-        }, 1500); 
+        }, 1500); // 機器震動時間
     }
 
     function addToHistory(winners) {
