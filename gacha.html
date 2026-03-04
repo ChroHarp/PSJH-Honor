@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>復古拼貼扭蛋抽籤機</title>
+    <style>
+        /* 復古拼貼賽博龐克 & 混合媒介風格 */
+        :root {
+            --bg-paper: #EFE9D9;
+            --primary-orange: #FF5722;
+            --primary-blue: #1A237E;
+            --accent-yellow: #FFC107;
+            --black: #111111;
+            --border-thick: 4px solid var(--black);
+        }
+
+        body {
+            background-color: var(--bg-paper);
+            color: var(--black);
+            font-family: 'Helvetica Neue', Arial, 'Microsoft JhengHei', sans-serif;
+            margin: 0;
+            padding: 20px;
+            /* 網點背景效果 */
+            background-image: radial-gradient(var(--black) 10%, transparent 10%);
+            background-size: 12px 12px;
+            background-position: 0 0, 6px 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            background-color: var(--bg-paper);
+            border: var(--border-thick);
+            box-shadow: 8px 8px 0px var(--primary-blue);
+            max-width: 800px;
+            width: 100%;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background-color: var(--primary-orange);
+            color: white;
+            padding: 10px;
+            border: var(--border-thick);
+            transform: rotate(-2deg);
+            margin-top: -10px;
+            box-shadow: 4px 4px 0px var(--black);
+        }
+
+        /* 控制面板 */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            background-color: #fff;
+            padding: 15px;
+            border: 2px dashed var(--black);
+        }
+
+        .checkbox-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .checkbox-group label {
+            background-color: var(--accent-yellow);
+            padding: 5px 10px;
+            border: 2px solid var(--black);
+            cursor: pointer;
+            box-shadow: 2px 2px 0px var(--black);
+            transition: transform 0.1s;
+        }
+        
+        .checkbox-group label:active {
+            transform: translate(2px, 2px);
+            box-shadow: 0px 0px 0px var(--black);
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: bold;
+        }
+
+        input[type="number"] {
+            width: 60px;
+            padding: 5px;
+            font-size: 1.2rem;
+            border: 2px solid var(--black);
+            text-align: center;
+        }
+
+        .btn {
+            background-color: var(--primary-blue);
+            color: white;
+            border: var(--border-thick);
+            padding: 10px 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 4px 4px 0px var(--black);
+            text-transform: uppercase;
+            transition: all 0.1s;
+        }
+
+        .btn:hover {
+            background-color: #283593;
+        }
+
+        .btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0px 0px 0px var(--black);
+        }
+
+        .btn-clear {
+            background-color: #d32f2f;
+        }
+
+        /* 扭蛋機動畫區 */
+        .gacha-area {
+            height: 300px;
+            border: var(--border-thick);
+            background-color: #fff;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #f0f0f0 25%, transparent 25%, transparent 75%, #f0f0f0 75%, #f0f0f0), 
+                        linear-gradient(45deg, #f0f0f0 25%, transparent 25%, transparent 75%, #f0f0f0 75%, #f0f0f0);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+        }
+
+        .machine {
+            width: 150px;
+            height: 200px;
+            background-color: var(--primary-orange);
+            border: var(--border-thick);
+            position: relative;
+            z-index: 2;
+            box-shadow: 10px 10px 0px rgba(0,0,0,0.2);
+        }
+
+        .machine-glass {
+            width: 110px;
+            height: 110px;
+            background-color: rgba(255,255,255,0.8);
+            border: var(--border-thick);
+            border-radius: 50%;
+            margin: 10px auto;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .knob {
+            width: 40px;
+            height: 40px;
+            background-color: var(--accent-yellow);
+            border: var(--border-thick);
+            border-radius: 50%;
+            margin: 10px auto;
+            position: relative;
+        }
+
+        .knob::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 40px;
+            background-color: var(--black);
+            left: 15px;
+            top: -4px;
+        }
+
+        .gacha-ball {
+            width: 60px;
+            height: 60px;
+            border: var(--border-thick);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(to bottom, #ff5252 50%, #fff 50%);
+            z-index: 3;
+            display: none;
+        }
+
+        /* 撕紙邊緣顯示結果 */
+        .result-reveal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background-color: #fff;
+            padding: 20px 40px;
+            z-index: 10;
+            text-align: center;
+            /* 模擬撕紙邊緣 */
+            clip-path: polygon(
+                0% 5%, 5% 0%, 10% 8%, 15% 2%, 20% 7%, 25% 0%, 30% 6%, 35% 2%, 40% 9%, 45% 1%, 50% 6%, 55% 2%, 60% 8%, 65% 1%, 70% 7%, 75% 0%, 80% 5%, 85% 2%, 90% 8%, 95% 1%, 100% 5%,
+                100% 95%, 95% 100%, 90% 92%, 85% 98%, 80% 95%, 75% 100%, 70% 93%, 65% 99%, 60% 92%, 55% 98%, 50% 94%, 45% 99%, 40% 91%, 35% 98%, 30% 94%, 25% 100%, 20% 93%, 15% 98%, 10% 92%, 5% 100%, 0% 95%
+            );
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 2px solid rgba(0,0,0,0.1);
+        }
+
+        .result-reveal.show {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .result-reveal h2 {
+            margin: 0;
+            color: var(--primary-blue);
+            font-size: 2rem;
+            letter-spacing: 1px;
+        }
+
+        .result-reveal .drawn-names {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-orange);
+            margin-top: 10px;
+        }
+
+        /* 放射狀光芒 (爆開效果) */
+        .sunburst {
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: repeating-conic-gradient(var(--accent-yellow) 0 15deg, transparent 15deg 30deg);
+            z-index: 1;
+            animation: rotate 10s linear infinite;
+            display: none;
+            opacity: 0.8;
+        }
+
+        /* 歷史紀錄區 */
+        .history-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .history-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-bottom: var(--border-thick);
+            padding-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .history-item {
+            background-color: var(--primary-blue);
+            color: white;
+            padding: 5px 10px;
+            border: 2px solid var(--black);
+            font-weight: bold;
+            box-shadow: 2px 2px 0px var(--black);
+            animation: popIn 0.3s ease-out;
+        }
+
+        /* 動畫 Keyframes */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+        @keyframes dropBall {
+            0% { top: 30%; left: 50%; transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            20% { opacity: 1; }
+            100% { top: 80%; left: 50%; transform: translate(-50%, -50%) scale(1) rotate(360deg); }
+        }
+
+        @keyframes rotate {
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); }
+            80% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .animating-machine {
+            animation: shake 0.5s;
+            animation-iteration-count: 3;
+        }
+        
+        .animating-knob {
+            animation: rotate 1.5s linear;
+        }
+
+        .animating-ball {
+            display: block;
+            animation: dropBall 1s forwards;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>✂️ 復古扭蛋抽籤機</h1>
+
+    <div class="controls">
+        <div class="checkbox-group" id="group-checkboxes">
+            </div>
+        
+        <div class="input-group">
+            <label for="draw-count">抽出人數:</label>
+            <input type="number" id="draw-count" value="1" min="1" max="10">
+        </div>
+
+        <button class="btn" id="btn-draw">開始抽籤 (DRAW)</button>
+        <button class="btn btn-clear" id="btn-clear">清除紀錄</button>
+    </div>
+
+    <div class="gacha-area">
+        <div class="sunburst" id="sunburst"></div>
+        <div class="machine" id="machine">
+            <div class="machine-glass">
+                <div style="position:absolute; width:30px; height:30px; background:red; border:2px solid #000; border-radius:50%; top:60px; left:10px;"></div>
+                <div style="position:absolute; width:30px; height:30px; background:blue; border:2px solid #000; border-radius:50%; top:70px; left:40px;"></div>
+                <div style="position:absolute; width:30px; height:30px; background:yellow; border:2px solid #000; border-radius:50%; top:50px; left:60px;"></div>
+            </div>
+            <div class="knob" id="knob"></div>
+        </div>
+        <div class="gacha-ball" id="gacha-ball"></div>
+        
+        <div class="result-reveal" id="result-reveal">
+            <h2>🎉 中獎名單 🎉</h2>
+            <div class="drawn-names" id="drawn-names"></div>
+        </div>
+    </div>
+
+    <div class="history-section">
+        <div class="history-title">
+            <span>📜 抽籤紀錄</span>
+            <span id="remaining-count" style="font-size: 1rem; color: var(--primary-orange);">剩餘人數: 0</span>
+        </div>
+        <div class="history-list" id="history-list">
+            </div>
+    </div>
+</div>
+
+<script>
+    // 原始資料
+    const rawData = `分組	班級	座號	姓名
+7A	703	17	許羽昀
+7A	708	10	黃以理
+7A	708	27	盧映彤
+7A	711	13	饒閔元
+7B	701	14	吳采薇
+7B	701	17	林少筠
+7B	705	2	余侑霖
+7B	706	2	吳昱穎
+7C	712	13	顏楷恩
+7C	713	27	鍾妍瑾
+7C	714	11	賴韋諺
+7C	715	5	柯炳綸
+8A	802	2	宋泓錡
+8A	802	29	朱宸緯
+8A	803	29	王彤綺
+8A	803	19	李紫晴
+8B	807	6	陳彥澄
+8B	807	8	温傑宇
+8B	809	25	温欣庭
+8B	812	29	龐羽彤
+9A	905	4	沈軒毅
+9A	910	17	李姸均
+9A	911	7	黃于展`;
+
+    let students = [];
+    let groups = new Set();
+    let isAnimating = false;
+
+    // 解析資料
+    function parseData() {
+        const lines = rawData.trim().split('\n');
+        // 跳過標題行
+        for (let i = 1; i < lines.length; i++) {
+            const [group, classNum, seatNum, name] = lines[i].split('\t');
+            if (group && name) {
+                students.push({
+                    group: group.trim(),
+                    classNum: classNum.trim(),
+                    seatNum: seatNum.trim(),
+                    name: name.trim(),
+                    drawn: false
+                });
+                groups.add(group.trim());
+            }
+        }
+    }
+
+    // 初始化 UI
+    function initUI() {
+        const checkboxContainer = document.getElementById('group-checkboxes');
+        // 依照資料自動產生分組核取框
+        Array.from(groups).sort().forEach(group => {
+            const label = document.createElement('label');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = group;
+            checkbox.checked = true; // 預設全選
+            checkbox.addEventListener('change', updateRemainingCount);
+            
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(' ' + group));
+            checkboxContainer.appendChild(label);
+        });
+        updateRemainingCount();
+    }
+
+    // 取得當前可抽籤的名單
+    function getAvailableStudents() {
+        const selectedGroups = Array.from(document.querySelectorAll('#group-checkboxes input:checked')).map(cb => cb.value);
+        return students.filter(s => selectedGroups.includes(s.group) && !s.drawn);
+    }
+
+    // 更新剩餘人數顯示
+    function updateRemainingCount() {
+        const available = getAvailableStudents().length;
+        document.getElementById('remaining-count').innerText = `剩餘人數: ${available}`;
+    }
+
+    // 抽籤主邏輯
+    function drawLots() {
+        if (isAnimating) return;
+
+        const countInput = parseInt(document.getElementById('draw-count').value);
+        if (isNaN(countInput) || countInput < 1) {
+            alert("請輸入有效的抽出人數！");
+            return;
+        }
+
+        const availableStudents = getAvailableStudents();
+        
+        if (availableStudents.length === 0) {
+            alert("目前選擇的分組已經沒有未抽出的學生了！請勾選其他組別或清除紀錄。");
+            return;
+        }
+
+        const drawCount = Math.min(countInput, availableStudents.length);
+        if (countInput > availableStudents.length) {
+            alert(`注意：所選分組僅剩 ${availableStudents.length} 人，將全數抽出。`);
+        }
+
+        // 開始抽籤（洗牌並選出）
+        let shuffled = [...availableStudents].sort(() => 0.5 - Math.random());
+        let winners = shuffled.slice(0, drawCount);
+
+        // 標記為已抽出
+        winners.forEach(w => {
+            const index = students.findIndex(s => s.name === w.name && s.group === w.group);
+            if (index !== -1) students[index].drawn = true;
+        });
+
+        playAnimation(winners);
+    }
+
+    // 播放復古動畫
+    function playAnimation(winners) {
+        isAnimating = true;
+        const machine = document.getElementById('machine');
+        const knob = document.getElementById('knob');
+        const ball = document.getElementById('gacha-ball');
+        const reveal = document.getElementById('result-reveal');
+        const sunburst = document.getElementById('sunburst');
+        const namesContainer = document.getElementById('drawn-names');
+
+        // 隱藏上一次的結果
+        reveal.classList.remove('show');
+        sunburst.style.display = 'none';
+        ball.style.display = 'none';
+        ball.style.animation = 'none';
+
+        // 1. 機器震動 & 轉動旋鈕
+        machine.classList.add('animating-machine');
+        knob.classList.add('animating-knob');
+
+        setTimeout(() => {
+            // 2. 掉出扭蛋
+            machine.classList.remove('animating-machine');
+            knob.classList.remove('animating-knob');
+            
+            ball.style.display = 'block';
+            ball.style.animation = 'dropBall 1s forwards cubic-bezier(0.25, 1, 0.5, 1)';
+
+            setTimeout(() => {
+                // 3. 扭蛋爆開，顯示撕紙與放射光芒
+                ball.style.display = 'none';
+                sunburst.style.display = 'block';
+                
+                // 準備中獎名單文字
+                namesContainer.innerHTML = winners.map(w => 
+                    `<div>${w.group} - ${w.classNum}班 ${w.seatNum}號 <br> <span style="font-size: 2rem;">${w.name}</span></div>`
+                ).join('<hr style="border-top: 2px dashed #111; margin: 10px 0;">');
+
+                reveal.classList.add('show');
+
+                // 4. 新增至歷史紀錄
+                addToHistory(winners);
+                updateRemainingCount();
+                
+                // 稍微延遲後解除鎖定，讓使用者可以進行下一次抽籤
+                setTimeout(() => {
+                    isAnimating = false;
+                }, 500);
+
+            }, 1100); // 等待扭蛋掉落動畫結束
+
+        }, 1500); // 機器震動時間
+    }
+
+    // 新增歷史紀錄 UI
+    function addToHistory(winners) {
+        const historyList = document.getElementById('history-list');
+        winners.forEach(w => {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.innerText = `${w.group} | ${w.name}`;
+            // 插入到最前面
+            historyList.insertBefore(item, historyList.firstChild);
+        });
+    }
+
+    // 清除紀錄
+    function clearHistory() {
+        if (isAnimating) return;
+        if (confirm("確定要清除所有抽籤紀錄嗎？這將重置所有學生的抽籤狀態。")) {
+            students.forEach(s => s.drawn = false);
+            document.getElementById('history-list').innerHTML = '';
+            document.getElementById('result-reveal').classList.remove('show');
+            document.getElementById('sunburst').style.display = 'none';
+            updateRemainingCount();
+        }
+    }
+
+    // 綁定事件
+    document.getElementById('btn-draw').addEventListener('click', drawLots);
+    document.getElementById('btn-clear').addEventListener('click', clearHistory);
+
+    // 啟動程式
+    parseData();
+    initUI();
+</script>
+
+</body>
+</html>
