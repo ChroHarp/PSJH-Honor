@@ -40,6 +40,11 @@
     .swatch.mid{background:linear-gradient(135deg,var(--tier-mid-1),var(--tier-mid-2));}
     .swatch.normal{background:rgba(255,255,255,.75);}
     .board{border-radius:22px;border:1px solid rgba(0,0,0,.10);background:rgba(255,255,255,.18);box-shadow:var(--shadow);overflow:hidden;}
+    .year-nav{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin:12px auto 14px;max-width:1120px;padding:0 10px;}
+    .scroll-btn{width:38px;height:34px;border-radius:12px;border:1px solid rgba(0,0,0,.14);background:rgba(255,255,255,.62);
+      box-shadow:var(--shadow-soft);font-size:22px;line-height:1;font-weight:900;color:rgba(0,0,0,.70);cursor:pointer;}
+    .scroll-btn:hover{background:rgba(255,255,255,.86);}
+    .year-range{width:100%;accent-color:#9b7414;cursor:pointer;}
     .years{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(260px,1fr);gap:14px;padding:18px;overflow-x:auto;scroll-snap-type:x mandatory;}
     .years::-webkit-scrollbar{height:10px;} .years::-webkit-scrollbar-thumb{background:rgba(0,0,0,.18);border-radius:999px;}
     .year{scroll-snap-align:start;border-radius:18px;background:rgba(255,255,255,.22);border:1px solid rgba(0,0,0,.10);
@@ -103,18 +108,17 @@
 
       <div class="toggles">
         <label class="toggle"><input id="showPeople" type="checkbox" checked />顯示參賽者</label>
-        <label class="toggle"><input id="collapseSmall" type="checkbox" />只看大獎（隱藏一般項目）</label>
+        <label class="toggle"><input id="collapseSmall" type="checkbox" />只顯示大賽獎項</label>
       </div>
 
-      <div class="legend" aria-label="legend">
-        <span class="dot"><span class="swatch super"></span>重要大獎（最高）</span>
-        <span class="dot"><span class="swatch major"></span>重要大獎</span>
-        <span class="dot"><span class="swatch mid"></span>中度強調</span>
-        <span class="dot"><span class="swatch normal"></span>一般</span>
-      </div>
     </section>
 
     <section class="board" aria-label="award wall">
+      <div class="year-nav" aria-label="年份左右滑桿">
+        <button id="scrollLeft" class="scroll-btn" type="button" aria-label="向左滑動">‹</button>
+        <input id="yearRange" class="year-range" type="range" min="0" max="0" value="0" aria-label="年份橫向滑桿" />
+        <button id="scrollRight" class="scroll-btn" type="button" aria-label="向右滑動">›</button>
+      </div>
       <div id="years" class="years"></div>
     </section>
 
@@ -216,12 +220,38 @@
       col.appendChild(cards);
       wrap.appendChild(col);
     }
+    requestAnimationFrame(syncYearRange);
+  }
+
+  function scrollToLatestYear(){
+    const wrap=document.getElementById('years');
+    wrap.scrollLeft=wrap.scrollWidth;
+    syncYearRange();
+  }
+
+  function syncYearRange(){
+    const wrap=document.getElementById('years');
+    const range=document.getElementById('yearRange');
+    range.max=Math.max(0, wrap.scrollWidth-wrap.clientWidth);
+    range.value=Math.min(wrap.scrollLeft, Number(range.max));
+  }
+
+  function scrollYearsBy(direction){
+    const wrap=document.getElementById('years');
+    const max=Math.max(0, wrap.scrollWidth-wrap.clientWidth);
+    const step=Math.max(260, wrap.clientWidth*.75);
+    wrap.scrollLeft=Math.max(0, Math.min(max, wrap.scrollLeft + direction * step));
+    syncYearRange();
   }
 
   const q=document.getElementById('q');
   const tier=document.getElementById('tier');
   const showPeople=document.getElementById('showPeople');
   const collapseSmall=document.getElementById('collapseSmall');
+  const yearsWrap=document.getElementById('years');
+  const yearRange=document.getElementById('yearRange');
+  const scrollLeft=document.getElementById('scrollLeft');
+  const scrollRight=document.getElementById('scrollRight');
 
   q.addEventListener('input',e=>{ state.q=e.target.value||""; render(); });
   tagSel.addEventListener('change',e=>{ state.tag=e.target.value||""; render(); });
@@ -229,8 +259,14 @@
   showPeople.addEventListener('change',e=>{ state.showPeople=!!e.target.checked; render(); });
   collapseSmall.addEventListener('change',e=>{ state.collapseSmall=!!e.target.checked; render(); });
   jumpSel.addEventListener('change',e=>{ const y=e.target.value; if(!y) return; const el=document.getElementById('year-'+y); if(el) el.scrollIntoView({behavior:"smooth", inline:"start"}); });
+  yearsWrap.addEventListener('scroll',syncYearRange,{passive:true});
+  yearRange.addEventListener('input',e=>{ yearsWrap.scrollLeft=Number(e.target.value); });
+  scrollLeft.addEventListener('click',()=>scrollYearsBy(-1));
+  scrollRight.addEventListener('click',()=>scrollYearsBy(1));
+  window.addEventListener('resize',syncYearRange);
 
   render();
+  requestAnimationFrame(scrollToLatestYear);
 </script>
 </body>
 </html>
