@@ -98,21 +98,32 @@
         const rosterInfo = window.getActiveGachaRoster();
         const students = rosterInfo.students;
         const groups = new Set(students.map(s => s.group));
+        const TEMP_GROUP_NAME = '臨時';
+        let tempStudents = [];
+        let tempRawText = '';
         let isAnimating = false;
         let historyEntries = [];
         let nextHistoryId = 1;
         let activeInspectGroup = null;
 
+        function getAllStudents() {
+            return [...students, ...tempStudents];
+        }
+
+        function updateRosterTotalTag() {
+            document.getElementById('roster-source-tag').textContent = `名單人數: ${getAllStudents().length} 人`;
+        }
+
         // 啟動 錢天堂風柑仔店 溫暖水彩 3D 場景
         const scene = new window.GachaScene('gacha-canvas');
 
-        document.getElementById('roster-source-tag').textContent = `名單人數: ${students.length} 人`;
+        updateRosterTotalTag();
 
         // 初始化組別勾選與展開名單按鈕
         const checkboxContainer = document.getElementById('group-checkboxes');
         const groupRosterPanel = document.getElementById('group-roster-panel');
 
-        Array.from(groups).sort().forEach(group => {
+        function createGroupChip(group, defaultChecked) {
             const chip = document.createElement('div');
             chip.className = 'group-chip';
             chip.dataset.group = group;
@@ -120,7 +131,7 @@
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.value = group;
-            checkbox.checked = true;
+            checkbox.checked = defaultChecked;
             checkbox.title = `勾選是否納入「${group}」進行抽籤`;
             checkbox.setAttribute('aria-label', `勾選 ${group}`);
             checkbox.addEventListener('change', updateRemainingCount);
@@ -129,7 +140,9 @@
             expandBtn.type = 'button';
             expandBtn.className = 'group-expand-btn';
             expandBtn.textContent = `${group} ▾`;
-            expandBtn.title = `展開「${group}」名單以手動切換已抽／未抽`;
+            expandBtn.title = group === TEMP_GROUP_NAME
+                ? '展開空白臨時名單，手動輸入名字即可抽籤'
+                : `展開「${group}」名單以手動切換已抽／未抽`;
             expandBtn.addEventListener('click', () => {
                 activeInspectGroup = activeInspectGroup === group ? null : group;
                 renderGroupRoster();
@@ -138,7 +151,66 @@
             chip.appendChild(checkbox);
             chip.appendChild(expandBtn);
             checkboxContainer.appendChild(chip);
-        });
+        }
+
+        Array.from(groups).sort().forEach(group => createGroupChip(group, true));
+        createGroupChip(TEMP_GROUP_NAME, false);
+
+        function parseTempRosterText(raw) {
+            const tokens = (raw || '').split(/[\s\u3000]+/).map(t => t.trim()).filter(Boolean);
+            const prevMap = new Map();
+            tempStudents.forEach(s => prevMap.set(s.name, s));
+            const wasEmpty = tempStudents.length === 0;
+
+            tempStudents = tokens.map(name => {
+                const prev = prevMap.get(name);
+                return {
+                    group: TEMP_GROUP_NAME,
+                    classNum: '',
+                    seatNum: '',
+                    name,
+                    drawn: prev ? prev.drawn : false
+                };
+            });
+
+            // 同步移除已不存在於臨時名單中的紀錄
+            historyEntries = historyEntries.filter(e =>
+                e.student.group !== TEMP_GROUP_NAME || tempStudents.includes(e.student)
+            );
+
+            // 初次輸入臨時名單時自動勾選「臨時」方便直接抽籤
+            if (wasEmpty && tempStudents.length > 0) {
+                const tempCb = document.querySelector(`#group-checkboxes input[value="${TEMP_GROUP_NAME}"]`);
+                if (tempCb) tempCb.checked = true;
+            }
+        }
+
+        function renderStudentPills(listWrap, groupStudents) {
+            listWrap.innerHTML = '';
+            groupStudents.forEach(s => {
+                const pill = document.createElement('button');
+                pill.type = 'button';
+                pill.className = `student-pill${s.drawn ? ' is-excluded' : ''}`;
+                pill.textContent = s.seatNum ? `${s.seatNum}號 ${s.name}` : s.name;
+                pill.title = s.drawn ? '已在抽籤紀錄中，點擊移出並恢復抽籤' : '點擊加入抽籤紀錄';
+                pill.addEventListener('click', () => {
+                    if (isAnimating) return;
+                    if (!s.drawn) {
+                        s.drawn = true;
+                        if (!historyEntries.some(e => e.student === s)) {
+                            historyEntries.unshift({ id: nextHistoryId++, student: s });
+                        }
+                    } else {
+                        s.drawn = false;
+                        historyEntries = historyEntries.filter(e => e.student !== s);
+                    }
+                    renderHistory();
+                    renderStudentPills(listWrap, groupStudents);
+                    updateRemainingCount();
+                });
+                listWrap.appendChild(pill);
+            });
+        }
 
         function renderGroupRoster() {
             document.querySelectorAll('#group-checkboxes .group-chip').forEach(chip => {
@@ -154,7 +226,6 @@
                 return;
             }
 
-            const groupStudents = students.filter(s => s.group === activeInspectGroup);
             groupRosterPanel.hidden = false;
             groupRosterPanel.innerHTML = '';
 
@@ -162,7 +233,9 @@
             header.className = 'roster-panel-header';
 
             const title = document.createElement('span');
-            title.textContent = `📋 ${activeInspectGroup} 名單（點擊切換已抽／未抽）`;
+            title.textContent = activeInspectGroup === TEMP_GROUP_NAME
+                ? '✏️ 臨時空白名單（空白或換行分隔名字）'
+                : `📋 ${activeInspectGroup} 名單（點擊切換已抽／未抽）`;
 
             const closeBtn = document.createElement('button');
             closeBtn.type = 'button';
@@ -181,29 +254,56 @@
             const listWrap = document.createElement('div');
             listWrap.className = 'student-pill-list';
 
-            groupStudents.forEach(s => {
-                const pill = document.createElement('button');
-                pill.type = 'button';
-                pill.className = `student-pill${s.drawn ? ' is-excluded' : ''}`;
-                pill.textContent = `${s.seatNum}號 ${s.name}`;
-                pill.title = s.drawn ? '已在抽籤紀錄中，點擊移出並恢復抽籤' : '點擊加入抽籤紀錄';
-                pill.addEventListener('click', () => {
+            if (activeInspectGroup === TEMP_GROUP_NAME) {
+                const textarea = document.createElement('textarea');
+                textarea.id = 'temp-roster-input';
+                textarea.className = 'temp-roster-textarea';
+                textarea.placeholder = '輸入名單，用空白或換行分隔名字\n例如：王小明 李小華 張大文';
+                textarea.value = tempRawText;
+
+                const toolbar = document.createElement('div');
+                toolbar.className = 'temp-roster-toolbar';
+
+                const countHint = document.createElement('span');
+                countHint.id = 'temp-roster-count';
+                countHint.textContent = `目前 ${tempStudents.length} 人`;
+
+                const clearTempBtn = document.createElement('button');
+                clearTempBtn.type = 'button';
+                clearTempBtn.className = 'px-mini-btn';
+                clearTempBtn.textContent = '清空臨時名單';
+                clearTempBtn.addEventListener('click', () => {
                     if (isAnimating) return;
-                    if (!s.drawn) {
-                        s.drawn = true;
-                        if (!historyEntries.some(e => e.student === s)) {
-                            historyEntries.unshift({ id: nextHistoryId++, student: s });
-                        }
-                    } else {
-                        s.drawn = false;
-                        historyEntries = historyEntries.filter(e => e.student !== s);
-                    }
+                    tempRawText = '';
+                    textarea.value = '';
+                    parseTempRosterText('');
+                    countHint.textContent = '目前 0 人';
+                    renderStudentPills(listWrap, tempStudents);
                     renderHistory();
-                    renderGroupRoster();
+                    updateRosterTotalTag();
                     updateRemainingCount();
                 });
-                listWrap.appendChild(pill);
-            });
+
+                toolbar.appendChild(countHint);
+                toolbar.appendChild(clearTempBtn);
+
+                textarea.addEventListener('input', () => {
+                    tempRawText = textarea.value;
+                    parseTempRosterText(tempRawText);
+                    countHint.textContent = `目前 ${tempStudents.length} 人`;
+                    renderStudentPills(listWrap, tempStudents);
+                    renderHistory();
+                    updateRosterTotalTag();
+                    updateRemainingCount();
+                });
+
+                groupRosterPanel.appendChild(textarea);
+                groupRosterPanel.appendChild(toolbar);
+                renderStudentPills(listWrap, tempStudents);
+            } else {
+                const groupStudents = students.filter(s => s.group === activeInspectGroup);
+                renderStudentPills(listWrap, groupStudents);
+            }
 
             groupRosterPanel.appendChild(listWrap);
         }
@@ -213,10 +313,11 @@
                 document.querySelectorAll('#group-checkboxes input:checked')
             ).map(cb => cb.value);
             const allowRepeat = document.getElementById('allow-repeat').checked;
+            const all = getAllStudents();
             if (allowRepeat) {
-                return students.filter(s => selectedGroups.includes(s.group));
+                return all.filter(s => selectedGroups.includes(s.group));
             }
-            return students.filter(s => selectedGroups.includes(s.group) && !s.drawn);
+            return all.filter(s => selectedGroups.includes(s.group) && !s.drawn);
         }
 
         function updateRemainingCount() {
@@ -265,8 +366,8 @@
             const winners = pool.slice(0, drawCount);
 
             winners.forEach(w => {
-                const target = students.find(
-                    s => s.name === w.name && s.group === w.group && s.classNum === w.classNum && s.seatNum === w.seatNum
+                const target = getAllStudents().find(
+                    s => s === w || (s.name === w.name && s.group === w.group && s.classNum === w.classNum && s.seatNum === w.seatNum)
                 );
                 if (target) target.drawn = true;
             });
@@ -288,9 +389,12 @@
             scene.triggerDraw(() => {
                 document.getElementById('sunburst').style.display = 'block';
 
-                namesContainer.innerHTML = winners.map(w =>
-                    `<div>${w.group} - ${w.classNum}班 ${w.seatNum}號 <br> <span style="font-size: 1.75rem;">${w.name}</span></div>`
-                ).join('<hr style="border-top: 2px dashed #3a2214; margin: 10px 0;">');
+                namesContainer.innerHTML = winners.map(w => {
+                    const subLabel = (w.classNum || w.seatNum)
+                        ? `${w.group} - ${w.classNum}班 ${w.seatNum}號`
+                        : w.group;
+                    return `<div>${subLabel} <br> <span style="font-size: 1.75rem;">${w.name}</span></div>`;
+                }).join('<hr style="border-top: 2px dashed #3a2214; margin: 10px 0;">');
 
                 document.getElementById('result-reveal').classList.add('show');
 
@@ -308,7 +412,7 @@
                 isAnimating = false;
                 document.getElementById('btn-draw').disabled = false;
                 updateRemainingCount();
-            });
+            }, winners.length);
         }
 
         function renderHistory() {
@@ -361,9 +465,10 @@
 
         function addToHistory(winners) {
             const allowRepeat = document.getElementById('allow-repeat').checked;
+            const all = getAllStudents();
             winners.forEach(w => {
-                const target = students.find(
-                    s => s.name === w.name && s.group === w.group && s.classNum === w.classNum && s.seatNum === w.seatNum
+                const target = all.find(
+                    s => s === w || (s.name === w.name && s.group === w.group && s.classNum === w.classNum && s.seatNum === w.seatNum)
                 ) || w;
                 if (allowRepeat || !historyEntries.some(e => e.student === target)) {
                     historyEntries.unshift({ id: nextHistoryId++, student: target });
@@ -376,7 +481,7 @@
         function clearHistory() {
             if (isAnimating) return;
             if (confirm('確定要清除所有抽籤紀錄嗎？這將重置所有學生的抽籤狀態。')) {
-                students.forEach(s => { s.drawn = false; });
+                getAllStudents().forEach(s => { s.drawn = false; });
                 historyEntries = [];
                 renderHistory();
                 renderGroupRoster();

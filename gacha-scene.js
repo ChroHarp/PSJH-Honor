@@ -507,19 +507,37 @@
             ];
             signSpecs.forEach(sp => {
                 const tex = createVintageSignTexture(THREE, sp.bg, sp.rim, sp.title, sp.sub, sp.round);
-                const geo = sp.round
-                    ? new THREE.CylinderGeometry(0.46, 0.46, 0.06, 24)
-                    : new THREE.BoxGeometry(1.06, 0.72, 0.06);
-                const sign = new THREE.Mesh(geo, this.toonMat(0xffffff, tex));
                 if (sp.round) {
-                    sign.rotation.x = Math.PI / 2 + 0.08;
+                    const signGroup = new THREE.Group();
+                    const disc = new THREE.Mesh(
+                        new THREE.CylinderGeometry(0.46, 0.46, 0.06, 24),
+                        this.toonMat(sp.rim)
+                    );
+                    disc.rotation.x = Math.PI / 2;
+                    disc.castShadow = true;
+                    addInkOutline(THREE, disc, 1.03);
+
+                    const face = new THREE.Mesh(
+                        new THREE.CircleGeometry(0.45, 24),
+                        this.toonMat(0xffffff, tex)
+                    );
+                    face.position.z = 0.032;
+
+                    signGroup.add(disc, face);
+                    signGroup.rotation.x = 0.08;
+                    signGroup.position.set(sp.x, 3.52, -2.18);
+                    this.scene.add(signGroup);
                 } else {
+                    const sign = new THREE.Mesh(
+                        new THREE.BoxGeometry(1.06, 0.72, 0.06),
+                        this.toonMat(0xffffff, tex)
+                    );
                     sign.rotation.x = 0.08;
+                    sign.position.set(sp.x, 3.52, -2.18);
+                    sign.castShadow = true;
+                    addInkOutline(THREE, sign, 1.03);
+                    this.scene.add(sign);
                 }
-                sign.position.set(sp.x, 3.52, -2.18);
-                sign.castShadow = true;
-                addInkOutline(THREE, sign, 1.03);
-                this.scene.add(sign);
             });
 
             // 右側木柱上的直式紅底招牌布條
@@ -1072,10 +1090,8 @@
             addInkOutline(THREE, finial, 1.06);
             this.machineGroup.add(finial);
 
-            // 8. 掉落中扭蛋球（初始隱藏）
-            this.dropCapsule = createCapsuleMesh(THREE, 0.23, CAPSULE_COLORS[0], this.gradientMap);
-            this.dropCapsule.visible = false;
-            this.machineGroup.add(this.dropCapsule);
+            // 8. 掉落中扭蛋球群組（依抽出人數動態生成）
+            this.dropCapsules = [];
 
             this.scene.add(this.machineGroup);
         }
@@ -1215,18 +1231,84 @@
             this.renderer.setSize(w, h, false);
         }
 
-        triggerDraw(onComplete) {
+        clearDropCapsules() {
+            if (!this.dropCapsules || !this.machineGroup) return;
+            for (const dc of this.dropCapsules) {
+                this.machineGroup.remove(dc.mesh);
+            }
+            this.dropCapsules = [];
+        }
+
+        triggerDraw(onComplete, count = 1) {
             if (this.state !== 'idle') return false;
             this.state = 'cranking';
             this.stateTimer = 0;
             this.settleTime = 0;
             this.onBurstComplete = onComplete;
 
-            const chosenColor = CAPSULE_COLORS[Math.floor(Math.random() * 5)];
-            if (this.dropCapsule && this.THREE) {
-                this.dropCapsule.children[0].material.color.setHex(chosenColor);
-                this.dropCapsule.visible = false;
+            this.clearDropCapsules();
+            const dropCount = Math.max(1, Math.min(30, parseInt(count, 10) || 1));
+
+            // 洗牌顏色順序，確保連續掉出的扭蛋顏色豐富不單調
+            const shuffledColors = [...CAPSULE_COLORS];
+            for (let i = shuffledColors.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledColors[i], shuffledColors[j]] = [shuffledColors[j], shuffledColors[i]];
             }
+
+            const staggerMs = dropCount === 1
+                ? 0
+                : Math.min(220, Math.max(70, Math.floor(1400 / dropCount)));
+
+            const placed = [];
+            for (let i = 0; i < dropCount; i++) {
+                const color = shuffledColors[i % shuffledColors.length];
+                const radius = dropCount > 8 ? 0.18 : 0.22;
+                const mesh = createCapsuleMesh(this.THREE, radius, color, this.gradientMap);
+                mesh.visible = false;
+                mesh.position.set(0, 0.58, 0.74);
+                this.machineGroup.add(mesh);
+
+                // 在紅金地毯前方自然隨機散落（僅做防重疊間距檢查，不刻意排整齊）
+                let targetX = 0;
+                let targetZ = 1.65;
+                if (dropCount > 1) {
+                    const minSep = radius * 2.15;
+                    let bestX = (Math.random() - 0.5) * 1.68;
+                    let bestZ = 1.12 + Math.random() * 0.66;
+                    for (let attempt = 0; attempt < 24; attempt++) {
+                        const cx = (Math.random() - 0.5) * 1.68;
+                        const cz = 1.12 + Math.random() * 0.66;
+                        const overlaps = placed.some(p => {
+                            const dx = p.x - cx;
+                            const dz = p.z - cz;
+                            return (dx * dx + dz * dz) < (minSep * minSep);
+                        });
+                        if (!overlaps) {
+                            bestX = cx;
+                            bestZ = cz;
+                            break;
+                        }
+                    }
+                    targetX = bestX;
+                    targetZ = bestZ;
+                }
+                placed.push({ x: targetX, z: targetZ });
+
+                this.dropCapsules.push({
+                    mesh,
+                    radius,
+                    startDelay: i * staggerMs,
+                    targetX,
+                    targetZ,
+                    landRotX: 0.22 + Math.random() * 0.42,
+                    landRotY: (Math.random() - 0.5) * 0.9,
+                    landRotZ: (Math.random() - 0.5) * 0.85,
+                    started: false,
+                    landed: false
+                });
+            }
+
             this.sparkles.forEach(s => this.scene.remove(s.mesh));
             this.sparkles = [];
 
@@ -1381,34 +1463,73 @@
                     this.stateTimer = 0;
                     this.settleTime = 950;
                     this.machineGroup.position.set(0, 0, 0.25);
-                    this.dropCapsule.visible = true;
-                    this.dropCapsule.position.set(0, 0.58, 0.74);
                     this.audio.playDrop();
                 }
             } else if (this.state === 'dropping') {
                 this.updateCapsules(dt, false);
-                const t = Math.min(1, this.stateTimer / 880);
-                this.chuteFlapPivot.rotation.x = t < 0.25 ? -Math.sin((t / 0.25) * Math.PI) * 0.95 : 0;
+                const dropDuration = 820;
+                let flapKick = 0;
+                let allLanded = true;
 
-                this.dropCapsule.position.z = 0.74 + t * 1.08;
-                this.dropCapsule.rotation.x += dt * 0.009;
-                if (t < 0.45) {
-                    const p = t / 0.45;
-                    this.dropCapsule.position.y = 0.58 - p * p * 0.32;
-                } else if (t < 0.75) {
-                    const p = (t - 0.45) / 0.3;
-                    this.dropCapsule.position.y = 0.26 + Math.sin(p * Math.PI) * 0.3;
-                } else {
-                    const p = (t - 0.75) / 0.25;
-                    this.dropCapsule.position.y = 0.26 + Math.sin(p * Math.PI) * 0.12;
+                for (let idx = 0; idx < this.dropCapsules.length; idx++) {
+                    const dc = this.dropCapsules[idx];
+                    const localTime = this.stateTimer - dc.startDelay;
+                    if (localTime < 0) {
+                        allLanded = false;
+                        continue;
+                    }
+
+                    if (!dc.started) {
+                        dc.started = true;
+                        dc.mesh.visible = true;
+                        if (idx > 0) {
+                            this.audio.playTone(460 + (idx % 5) * 60, 0.08, 'sine', 0.06);
+                        }
+                    }
+
+                    const t = Math.min(1, localTime / dropDuration);
+                    if (t < 0.25) {
+                        flapKick = Math.max(flapKick, Math.sin((t / 0.25) * Math.PI));
+                    }
+
+                    dc.mesh.position.x = dc.targetX * t;
+                    dc.mesh.position.z = 0.74 + t * (dc.targetZ - 0.74);
+
+                    const groundY = dc.radius + 0.03;
+                    if (t < 1) {
+                        allLanded = false;
+                        dc.mesh.rotation.x += dt * 0.009;
+                        dc.mesh.rotation.z += dt * 0.004 * (idx % 2 === 0 ? 1 : -1);
+                        if (t < 0.45) {
+                            const p = t / 0.45;
+                            dc.mesh.position.y = 0.58 - p * p * (0.58 - groundY);
+                        } else if (t < 0.75) {
+                            const p = (t - 0.45) / 0.3;
+                            dc.mesh.position.y = groundY + Math.sin(p * Math.PI) * 0.28;
+                        } else {
+                            const p = (t - 0.75) / 0.25;
+                            dc.mesh.position.y = groundY + Math.sin(p * Math.PI) * 0.11;
+                        }
+                    } else {
+                        dc.mesh.position.y = groundY;
+                        dc.mesh.rotation.x = dc.landRotX;
+                        dc.mesh.rotation.y = dc.landRotY;
+                        dc.mesh.rotation.z = dc.landRotZ;
+                        dc.landed = true;
+                    }
                 }
 
-                if (this.stateTimer >= 900) {
+                this.chuteFlapPivot.rotation.x = -flapKick * 0.95;
+
+                if (allLanded) {
                     this.state = 'burst';
                     this.stateTimer = 0;
                     this.chuteFlapPivot.rotation.x = 0;
-                    const worldPos = this.dropCapsule.getWorldPosition(new this.THREE.Vector3());
-                    this.spawnSparkles(worldPos);
+                    const burstTargets = this.dropCapsules.slice(0, 6);
+                    for (const dc of burstTargets) {
+                        const worldPos = dc.mesh.getWorldPosition(new this.THREE.Vector3());
+                        this.spawnSparkles(worldPos);
+                    }
                     this.audio.playFanfare();
                 }
             } else if (this.state === 'burst') {
@@ -1417,7 +1538,7 @@
                     const cb = this.onBurstComplete;
                     this.onBurstComplete = null;
                     this.state = 'idle';
-                    this.dropCapsule.visible = false;
+                    this.clearDropCapsules();
                     if (cb) cb();
                 }
             } else {

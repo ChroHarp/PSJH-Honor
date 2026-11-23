@@ -556,6 +556,34 @@ body {
     box-shadow: none;
 }
 
+.temp-roster-textarea {
+    width: 100%;
+    min-height: 76px;
+    background: #ffffff;
+    color: var(--ink-dark);
+    border: 2px solid var(--panel-border);
+    padding: 8px 10px;
+    font-family: var(--font-ui);
+    font-size: 0.92rem;
+    line-height: 1.45;
+    resize: vertical;
+}
+
+.temp-roster-textarea:focus {
+    outline: none;
+    border-color: var(--gacha-red);
+}
+
+.temp-roster-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 6px 0 8px;
+    font-size: 0.82rem;
+    color: var(--ink-muted);
+    font-weight: 700;
+}
+
 /* 抽籤數量與按鈕 */
 .draw-row {
     display: flex;
