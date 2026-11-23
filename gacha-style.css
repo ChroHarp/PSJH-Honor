@@ -1,0 +1,659 @@
+@import url('https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+TC:wght@500;700;900&family=VT323&display=swap');
+
+:root {
+    /* 溫暖復古雜貨店 (柑仔店) 色票 */
+    --bg-warm-top: #f6e7cb;
+    --bg-warm-bot: #e6cba0;
+    --wood-light: #d99b52;
+    --wood-mid: #b87333;
+    --wood-dark: #7a451d;
+    --panel-cream: #fbf4e4;
+    --panel-cream-shadow: #e3d2b4;
+    --panel-border: #3a2214;
+
+    --ink-dark: #2c1a0e;
+    --ink-muted: #7a5c43;
+
+    --gacha-red: #e04f33;
+    --gacha-red-dark: #a83019;
+    --gacha-blue: #234b8c;
+    --gacha-blue-dark: #15305e;
+    --gacha-gold: #f5b841;
+    --gacha-gold-dark: #c48414;
+    --gacha-green: #3f915b;
+    --gacha-green-dark: #26633b;
+
+    --font-pixel: 'DotGothic16', 'Noto Sans TC', monospace;
+    --font-ui: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+    --font-num: 'VT323', 'DotGothic16', monospace;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--bg-warm-top);
+    background-image:
+        radial-gradient(circle at 22% 15%, rgba(255, 245, 214, 0.85) 0%, transparent 45%),
+        radial-gradient(circle at 80% 85%, rgba(217, 155, 82, 0.28) 0%, transparent 50%),
+        repeating-linear-gradient(
+            90deg,
+            rgba(122, 69, 29, 0.04) 0px,
+            rgba(122, 69, 29, 0.04) 24px,
+            transparent 24px,
+            transparent 48px
+        ),
+        linear-gradient(180deg, var(--bg-warm-top) 0%, var(--bg-warm-bot) 100%);
+    color: var(--ink-dark);
+    font-family: var(--font-ui);
+    padding: 16px 20px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* 像素木框 / 紙板工具類 */
+.pixel-box {
+    background: var(--panel-cream);
+    border: 3px solid var(--panel-border);
+    box-shadow:
+        inset 0 3px 0 #fffdf7,
+        inset 0 -4px 0 var(--panel-cream-shadow),
+        5px 5px 0 rgba(58, 34, 20, 0.28);
+}
+
+.wood-box {
+    background: var(--wood-mid);
+    color: #fff8eb;
+    border: 3px solid var(--panel-border);
+    box-shadow:
+        inset 0 3px 0 var(--wood-light),
+        inset 0 -4px 0 var(--wood-dark),
+        5px 5px 0 rgba(58, 34, 20, 0.3);
+}
+
+/* 頂部招牌列 */
+.top-bar {
+    width: 100%;
+    max-width: 1220px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 18px;
+    margin-bottom: 18px;
+}
+
+.brand-wrap {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.brand-badge {
+    width: 46px;
+    height: 46px;
+    background: var(--gacha-red);
+    border: 3px solid var(--panel-border);
+    box-shadow: inset 0 3px 0 #ff8566, inset 0 -3px 0 var(--gacha-red-dark);
+    display: grid;
+    place-items: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.brand-title {
+    margin: 0;
+    font-family: var(--font-pixel);
+    font-size: clamp(1.35rem, 2.5vw, 1.9rem);
+    letter-spacing: 2px;
+    color: #fff7e6;
+    text-shadow: 3px 3px 0 var(--panel-border);
+    line-height: 1.2;
+}
+
+.brand-sub {
+    font-size: 0.82rem;
+    color: #ffe3b8;
+    letter-spacing: 1px;
+    margin-top: 2px;
+}
+
+.nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* 像素按鈕 */
+.px-btn {
+    font-family: var(--font-pixel);
+    font-size: 0.98rem;
+    letter-spacing: 1px;
+    color: var(--ink-dark);
+    background: var(--panel-cream);
+    border: 3px solid var(--panel-border);
+    padding: 8px 14px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    box-shadow:
+        inset 0 3px 0 #ffffff,
+        inset 0 -3px 0 var(--panel-cream-shadow),
+        0 4px 0 var(--panel-border);
+    transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.12s ease;
+    user-select: none;
+}
+
+.px-btn:hover:not(:disabled) {
+    filter: brightness(1.04);
+}
+
+.px-btn:active:not(:disabled) {
+    transform: translateY(3px);
+    box-shadow:
+        inset 0 2px 0 rgba(255, 255, 255, 0.5),
+        0 1px 0 var(--panel-border);
+}
+
+.px-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.px-btn-primary {
+    background: var(--gacha-red);
+    color: #fff;
+    box-shadow:
+        inset 0 3px 0 #ff8566,
+        inset 0 -4px 0 var(--gacha-red-dark),
+        0 4px 0 var(--panel-border);
+    font-size: 1.15rem;
+    padding: 12px 20px;
+}
+
+.px-btn-gold {
+    background: var(--gacha-gold);
+    color: var(--ink-dark);
+    box-shadow:
+        inset 0 3px 0 #ffe08a,
+        inset 0 -4px 0 var(--gacha-gold-dark),
+        0 4px 0 var(--panel-border);
+}
+
+.px-btn-blue {
+    background: var(--gacha-blue);
+    color: #fff;
+    box-shadow:
+        inset 0 3px 0 #4f7ec9,
+        inset 0 -4px 0 var(--gacha-blue-dark),
+        0 4px 0 var(--panel-border);
+}
+
+.px-btn-green {
+    background: var(--gacha-green);
+    color: #fff;
+    box-shadow:
+        inset 0 3px 0 #6cc78a,
+        inset 0 -4px 0 var(--gacha-green-dark),
+        0 4px 0 var(--panel-border);
+}
+
+.px-btn-danger {
+    background: #b83227;
+    color: #fff;
+    box-shadow:
+        inset 0 3px 0 #e05c50,
+        inset 0 -4px 0 #7a1d15,
+        0 4px 0 var(--panel-border);
+}
+
+/* 主舞台佈局 */
+.main-grid {
+    width: 100%;
+    max-width: 1220px;
+    display: grid;
+    grid-template-columns: 1.38fr 1fr;
+    gap: 20px;
+    align-items: start;
+}
+
+@media (max-width: 960px) {
+    .main-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 45度 HD-2D 復古雜貨店微縮舞台 */
+.diorama-panel {
+    position: relative;
+    padding: 12px;
+    overflow: hidden;
+}
+
+.diorama-viewport {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    min-height: 400px;
+    background: #d8b589;
+    border: 3px solid var(--panel-border);
+    overflow: hidden;
+    box-shadow: inset 0 0 36px rgba(58, 34, 20, 0.35);
+}
+
+#gacha-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    cursor: pointer;
+}
+
+/* HD-2D 暖陽體積光與柔和暗角 */
+.hd2d-lighting {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(125deg, rgba(255, 240, 190, 0.24) 0%, rgba(255, 214, 130, 0.08) 40%, transparent 68%),
+        radial-gradient(ellipse at center, transparent 60%, rgba(58, 34, 20, 0.35) 100%);
+    z-index: 2;
+}
+
+.stage-hint {
+    position: absolute;
+    left: 12px;
+    bottom: 10px;
+    z-index: 3;
+    font-family: var(--font-pixel);
+    font-size: 0.85rem;
+    color: var(--ink-dark);
+    background: rgba(251, 244, 228, 0.9);
+    border: 2px solid var(--panel-border);
+    padding: 4px 10px;
+    pointer-events: none;
+    box-shadow: 2px 2px 0 rgba(58, 34, 20, 0.3);
+}
+
+.stage-status-pill {
+    position: absolute;
+    right: 12px;
+    top: 10px;
+    z-index: 3;
+    font-family: var(--font-pixel);
+    font-size: 0.85rem;
+    color: #fff8eb;
+    background: rgba(58, 34, 20, 0.85);
+    border: 2px solid var(--panel-border);
+    padding: 4px 10px;
+}
+
+/* ★ 保留原本的放射狀光芒與撕紙抽獎券樣式 */
+.sunburst {
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: repeating-conic-gradient(rgba(255, 193, 7, 0.55) 0 15deg, transparent 15deg 30deg);
+    z-index: 4;
+    animation: rotate 12s linear infinite;
+    display: none;
+    pointer-events: none;
+}
+
+@keyframes rotate {
+    100% { transform: rotate(360deg); }
+}
+
+.result-reveal {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    background-color: #fffdf8;
+    padding: 24px 36px 22px;
+    z-index: 10;
+    text-align: center;
+    max-height: 86%;
+    display: flex;
+    flex-direction: column;
+    width: min(300px, 84%);
+    /* 保留原本的撕紙邊緣 */
+    clip-path: polygon(
+        0% 2%, 5% 0%, 10% 4%, 15% 1%, 20% 3%, 25% 0%, 30% 3%, 35% 1%, 40% 4%, 45% 0%, 50% 3%, 55% 1%, 60% 4%, 65% 0%, 70% 3%, 75% 0%, 80% 2%, 85% 1%, 90% 4%, 95% 0%, 100% 2%,
+        100% 98%, 95% 100%, 90% 96%, 85% 99%, 80% 97%, 75% 100%, 70% 96%, 65% 99%, 60% 96%, 55% 99%, 50% 97%, 45% 99%, 40% 96%, 35% 99%, 30% 97%, 25% 100%, 20% 96%, 15% 99%, 10% 96%, 5% 100%, 0% 98%
+    );
+    transition: transform 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    filter: drop-shadow(0 10px 18px rgba(44, 26, 14, 0.45));
+}
+
+.result-reveal.show {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.result-reveal h2 {
+    margin: 0 0 8px 0;
+    color: var(--gacha-blue);
+    font-size: 1.55rem;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+}
+
+.btn-close-ticket {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    background: var(--gacha-red);
+    color: #fff;
+    border: 2px solid var(--panel-border);
+    font-family: var(--font-pixel);
+    font-size: 0.78rem;
+    padding: 2px 7px;
+    cursor: pointer;
+}
+
+.names-window {
+    overflow: hidden;
+    flex-grow: 1;
+    position: relative;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%);
+}
+
+.drawn-names {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--gacha-red);
+    padding: 14px 0;
+    position: relative;
+}
+
+@keyframes pingPongScroll {
+    0%, 15% { transform: translateY(0); }
+    85%, 100% { transform: translateY(var(--scroll-dist)); }
+}
+
+/* 右側控制與紀錄面板 */
+.control-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.panel-section {
+    padding: 16px;
+}
+
+.section-heading {
+    margin: 0 0 12px 0;
+    font-family: var(--font-pixel);
+    font-size: 1.1rem;
+    color: var(--gacha-red-dark);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px dashed var(--wood-light);
+    padding-bottom: 8px;
+}
+
+.group-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.px-mini-btn {
+    font-family: var(--font-pixel);
+    font-size: 0.8rem;
+    background: #f2e4ca;
+    color: var(--ink-dark);
+    border: 2px solid var(--panel-border);
+    padding: 3px 9px;
+    cursor: pointer;
+}
+
+.px-mini-btn:hover {
+    background: var(--gacha-gold);
+}
+
+.checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.group-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #efe2c8;
+    border: 2px solid var(--panel-border);
+    padding: 6px 10px;
+    cursor: pointer;
+    font-family: var(--font-pixel);
+    font-size: 0.95rem;
+    color: var(--ink-muted);
+    box-shadow: 2px 2px 0 var(--panel-border);
+    transition: all 0.1s ease;
+    user-select: none;
+}
+
+.group-chip:has(input:checked) {
+    background: var(--gacha-gold);
+    color: var(--ink-dark);
+    box-shadow: inset 0 2px 0 #ffe394, 2px 2px 0 var(--panel-border);
+}
+
+.group-chip input {
+    accent-color: var(--gacha-red);
+    cursor: pointer;
+}
+
+/* 抽籤數量與按鈕 */
+.draw-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 2px dashed var(--wood-light);
+    flex-wrap: wrap;
+}
+
+.stepper {
+    display: inline-flex;
+    align-items: center;
+    border: 3px solid var(--panel-border);
+    background: #fffdf7;
+}
+
+.stepper button {
+    width: 34px;
+    height: 38px;
+    background: #efe2c8;
+    color: var(--ink-dark);
+    border: none;
+    font-family: var(--font-pixel);
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.stepper button:hover {
+    background: var(--gacha-gold);
+}
+
+.stepper input[type="number"] {
+    width: 54px;
+    height: 38px;
+    background: #fffdf7;
+    color: var(--gacha-red-dark);
+    border: none;
+    border-left: 2px solid var(--panel-border);
+    border-right: 2px solid var(--panel-border);
+    text-align: center;
+    font-family: var(--font-num);
+    font-size: 1.5rem;
+}
+
+.action-buttons {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+/* 歷史紀錄 */
+.history-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.history-empty {
+    color: var(--ink-muted);
+    font-size: 0.9rem;
+    padding: 8px 0;
+}
+
+.history-item {
+    background: #fffdf7;
+    color: var(--ink-dark);
+    border: 2px solid var(--panel-border);
+    padding: 5px 10px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    box-shadow: 2px 2px 0 var(--panel-border);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    animation: popIn 0.25s ease-out;
+}
+
+.history-item .h-tag {
+    background: var(--gacha-blue);
+    color: #fff;
+    font-family: var(--font-pixel);
+    font-size: 0.75rem;
+    padding: 1px 5px;
+    border: 1px solid var(--panel-border);
+}
+
+@keyframes popIn {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* 名單頁面專用樣式 (roster.html) */
+.roster-container {
+    width: 100%;
+    max-width: 1100px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.roster-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+}
+
+.roster-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.px-input {
+    background: #fffdf7;
+    color: var(--ink-dark);
+    border: 3px solid var(--panel-border);
+    padding: 8px 12px;
+    font-family: var(--font-ui);
+    font-size: 0.95rem;
+}
+
+.px-input:focus {
+    outline: none;
+    border-color: var(--gacha-red);
+}
+
+.roster-table-wrap {
+    overflow-x: auto;
+    padding: 16px;
+}
+
+.roster-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.roster-table th {
+    text-align: left;
+    font-family: var(--font-pixel);
+    color: #fff8eb;
+    border-bottom: 3px solid var(--panel-border);
+    padding: 10px 12px;
+    background: var(--wood-dark);
+}
+
+.roster-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--panel-cream-shadow);
+}
+
+.roster-table tr:hover td {
+    background: rgba(245, 184, 65, 0.18);
+}
+
+.roster-editor-textarea {
+    width: 100%;
+    min-height: 260px;
+    background: #fffdf7;
+    color: var(--ink-dark);
+    border: 3px solid var(--panel-border);
+    padding: 12px;
+    font-family: monospace;
+    font-size: 0.95rem;
+    line-height: 1.55;
+    resize: vertical;
+}
+
+.notice-banner {
+    background: #fff8e6;
+    border: 3px solid var(--panel-border);
+    color: var(--ink-dark);
+    padding: 12px 16px;
+    font-size: 0.92rem;
+    line-height: 1.55;
+}
+
+.winner-group-tag {
+    display: inline-block;
+    background: var(--gacha-blue);
+    color: #fff;
+    font-family: var(--font-pixel);
+    font-size: 0.78rem;
+    padding: 2px 6px;
+    border: 2px solid var(--panel-border);
+}

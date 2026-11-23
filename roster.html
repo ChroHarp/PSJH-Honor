@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>名單管理 | 平興數枝扭蛋機</title>
+    <meta name="description" content="平興數枝扭蛋機學生名單檢視、編輯與匯出頁面">
+    <link rel="stylesheet" href="gacha-style.css">
+</head>
+<body>
+
+<header class="top-bar pixel-box">
+    <div class="brand-wrap">
+        <div class="brand-badge" aria-hidden="true">📋</div>
+        <div>
+            <h1 class="brand-title">扭蛋機名單管理</h1>
+            <div class="brand-sub">ROSTER &amp; DATA EDITOR</div>
+        </div>
+    </div>
+
+    <nav class="nav-actions">
+        <a href="gacha.html" class="px-btn px-btn-gold">🎰 返回扭蛋機</a>
+    </nav>
+</header>
+
+<main class="roster-container">
+    <div class="notice-banner pixel-box">
+        💡 <strong>名單修改說明：</strong><br>
+        • 若要<strong>永久更新</strong>網站名單（例如部署到 EZPage / GitHub），請直接編輯同目錄下的 <code>roster.js</code>，或於下方編輯區修改後點擊「下載 roster.js」覆蓋原檔。<br>
+        • 若只是<strong>現場臨時調整</strong>，可直接於下方編輯並點擊「套用到本機瀏覽器」，回到 <code>gacha.html</code> 即可立即生效。
+    </div>
+
+    <!-- 名單檢視表格 -->
+    <section class="pixel-box roster-table-wrap">
+        <div class="roster-toolbar" style="padding: 0 0 14px 0;">
+            <div class="roster-filters">
+                <input type="text" id="search-input" class="px-input" placeholder="搜尋姓名、班級或座號...">
+                <select id="group-filter" class="px-input">
+                    <option value="ALL">全部組別</option>
+                </select>
+            </div>
+            <div id="roster-count-badge" style="font-family: var(--font-pixel); color: var(--gacha-gold);">
+                共 0 位學生
+            </div>
+        </div>
+
+        <table class="roster-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>分組</th>
+                    <th>班級</th>
+                    <th>座號</th>
+                    <th>姓名</th>
+                </tr>
+            </thead>
+            <tbody id="roster-tbody"></tbody>
+        </table>
+    </section>
+
+    <!-- 直接編輯與匯出區 -->
+    <section class="pixel-box panel-section">
+        <h2 class="section-heading">
+            <span>✏️ 快速編輯名單 (Tab 分隔，可直接從 Excel 貼上)</span>
+            <span id="custom-status" style="font-size: 0.8rem; color: var(--ink-muted);">目前使用：檔案預設名單</span>
+        </h2>
+
+        <textarea id="raw-editor" class="roster-editor-textarea" spellcheck="false"></textarea>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px;">
+            <button type="button" class="px-btn px-btn-green" id="btn-save-local">💾 套用到本機瀏覽器</button>
+            <button type="button" class="px-btn px-btn-blue" id="btn-download-js">📥 下載 roster.js</button>
+            <button type="button" class="px-btn" id="btn-copy-raw">📋 複製名單文字</button>
+            <button type="button" class="px-btn px-btn-danger" id="btn-reset-default">↩️ 恢復為檔案預設名單</button>
+        </div>
+    </section>
+</main>
+
+<script src="roster.js"></script>
+<script>
+    (function () {
+        const editor = document.getElementById('raw-editor');
+        const tbody = document.getElementById('roster-tbody');
+        const groupFilter = document.getElementById('group-filter');
+        const searchInput = document.getElementById('search-input');
+        const countBadge = document.getElementById('roster-count-badge');
+        const customStatus = document.getElementById('custom-status');
+
+        let currentStudents = [];
+
+        function loadCurrentRoster() {
+            const info = window.getActiveGachaRoster();
+            currentStudents = info.students;
+            editor.value = info.rawText.trim();
+
+            if (info.isCustom) {
+                customStatus.textContent = '目前使用：★ 本機瀏覽器自訂名單';
+                customStatus.style.color = 'var(--gacha-gold)';
+            } else {
+                customStatus.textContent = '目前使用：roster.js 預設名單';
+                customStatus.style.color = 'var(--ink-muted)';
+            }
+
+            // 更新組別下拉選單
+            const prevVal = groupFilter.value;
+            const groups = Array.from(new Set(currentStudents.map(s => s.group))).sort();
+            groupFilter.innerHTML = '<option value="ALL">全部組別</option>';
+            groups.forEach(g => {
+                const opt = document.createElement('option');
+                opt.value = g;
+                opt.textContent = g;
+                groupFilter.appendChild(opt);
+            });
+            if (groups.includes(prevVal)) groupFilter.value = prevVal;
+
+            renderTable();
+        }
+
+        function renderTable() {
+            const q = searchInput.value.trim().toLowerCase();
+            const grp = groupFilter.value;
+
+            const filtered = currentStudents.filter(s => {
+                if (grp !== 'ALL' && s.group !== grp) return false;
+                if (!q) return true;
+                return (
+                    s.name.toLowerCase().includes(q) ||
+                    s.classNum.toLowerCase().includes(q) ||
+                    s.seatNum.toLowerCase().includes(q) ||
+                    s.group.toLowerCase().includes(q)
+                );
+            });
+
+            countBadge.textContent = `顯示 ${filtered.length} / ${currentStudents.length} 位學生`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--ink-muted); padding:20px;">沒有符合條件的學生資料</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map((s, idx) => `
+                <tr>
+                    <td style="color:var(--ink-muted); font-family:var(--font-num); font-size:1.2rem;">${idx + 1}</td>
+                    <td><span class="winner-group-tag">${s.group}</span></td>
+                    <td>${s.classNum}</td>
+                    <td>${s.seatNum}</td>
+                    <td style="font-weight:700; color:var(--ink-light);">${s.name}</td>
+                </tr>
+            `).join('');
+        }
+
+        document.getElementById('btn-save-local').addEventListener('click', () => {
+            const text = editor.value.trim();
+            const parsed = window.parseGachaRawData(text);
+            if (parsed.length === 0) {
+                alert('解析失敗：請確認格式為「分組[Tab]班級[Tab]座號[Tab]姓名」，且至少有一筆學生資料。');
+                return;
+            }
+            localStorage.setItem(window.GACHA_ROSTER_STORAGE_KEY, text);
+            loadCurrentRoster();
+            alert(`已套用 ${parsed.length} 位學生名單到本機瀏覽器！回到 gacha.html 即可使用。`);
+        });
+
+        document.getElementById('btn-reset-default').addEventListener('click', () => {
+            if (confirm('確定要清除本機自訂名單，恢復成 roster.js 的預設名單嗎？')) {
+                localStorage.removeItem(window.GACHA_ROSTER_STORAGE_KEY);
+                loadCurrentRoster();
+            }
+        });
+
+        document.getElementById('btn-copy-raw').addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(editor.value);
+                alert('已複製名單文字到剪貼簿！');
+            } catch (e) {
+                editor.select();
+                document.execCommand('copy');
+                alert('已複製名單文字到剪貼簿！');
+            }
+        });
+
+        document.getElementById('btn-download-js').addEventListener('click', () => {
+            const text = editor.value.trim();
+            const parsed = window.parseGachaRawData(text);
+            if (parsed.length === 0) {
+                alert('名單內容無效，無法匯出 roster.js。');
+                return;
+            }
+            // 確保第一行有標題列
+            const lines = text.split(/\r?\n/);
+            const normalized = lines[0].startsWith('分組') ? text : `分組\t班級\t座號\t姓名\n${text}`;
+            const escaped = normalized.replace(/`/g, '\\`');
+
+            const fileContent = `/**
+ * 平興數枝扭蛋機 - 獨立名單資料檔 (roster.js)
+ */
+window.GACHA_RAW_DATA = \`${escaped}\`;
+
+window.GACHA_ROSTER_STORAGE_KEY = 'psjh_gacha_custom_roster_v1';
+
+window.parseGachaRawData = ${window.parseGachaRawData.toString()};
+
+window.getActiveGachaRoster = ${window.getActiveGachaRoster.toString()};
+`;
+            const blob = new Blob([fileContent], { type: 'application/javascript;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'roster.js';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        searchInput.addEventListener('input', renderTable);
+        groupFilter.addEventListener('change', renderTable);
+
+        loadCurrentRoster();
+    })();
+</script>
+
+</body>
+</html>
