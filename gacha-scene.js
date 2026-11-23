@@ -1,12 +1,19 @@
 /**
- * 平興數枝扭蛋機 - 45度 HD-2D 復古雜貨店像素引擎 & 8-bit 音效模組
+ * 平興數枝扭蛋機 - 傳統柑仔店開放陳列 溫暖水彩 3D 場景引擎 (Three.js) & 音效模組
  */
 (function () {
-    const LOGICAL_W = 240;
-    const LOGICAL_H = 180;
+    const CAPSULE_COLORS = [
+        0xe62929, // 鮮朱紅
+        0x1c64d1, // 寶石藍
+        0xffbe0b, // 明亮金黃
+        0x1ea85a, // 翠綠
+        0xe84393, // 桃粉
+        0xff7b00, // 鮮橙橘
+        0x7c3aed  // 葡萄紫
+    ];
 
-    // 8-bit Web Audio 音效合成器
-    class RetroAudio {
+    // 溫暖木琴風 Web Audio 音效合成器
+    class CozyAudio {
         constructor() {
             this.ctx = null;
             this.muted = false;
@@ -22,7 +29,7 @@
             }
             return this.ctx;
         }
-        playTone(freq, duration, type = 'square', volume = 0.08, delay = 0) {
+        playTone(freq, duration, type = 'triangle', volume = 0.08, delay = 0) {
             const ctx = this.ensureCtx();
             if (!ctx) return;
             const now = ctx.currentTime + delay;
@@ -30,479 +37,1392 @@
             const gain = ctx.createGain();
             osc.type = type;
             osc.frequency.setValueAtTime(freq, now);
-            gain.gain.setValueAtTime(volume, now);
+            gain.gain.setValueAtTime(0.001, now);
+            gain.gain.linearRampToValueAtTime(volume, now + 0.012);
             gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
             osc.connect(gain);
             gain.connect(ctx.destination);
             osc.start(now);
-            osc.stop(now + duration);
+            osc.stop(now + duration + 0.02);
         }
         playCrank() {
             for (let i = 0; i < 6; i++) {
-                this.playTone(220 + i * 35, 0.05, 'square', 0.06, i * 0.16);
-                this.playTone(150, 0.04, 'triangle', 0.07, i * 0.16 + 0.08);
+                this.playTone(210 + i * 32, 0.07, 'triangle', 0.07, i * 0.17);
+                this.playTone(145, 0.05, 'sine', 0.06, i * 0.17 + 0.08);
             }
         }
         playDrop() {
-            this.playTone(520, 0.08, 'triangle', 0.1, 0);
-            this.playTone(340, 0.09, 'triangle', 0.1, 0.12);
-            this.playTone(680, 0.1, 'square', 0.07, 0.28);
+            this.playTone(523.25, 0.1, 'sine', 0.1, 0);
+            this.playTone(392.0, 0.11, 'triangle', 0.09, 0.14);
+            this.playTone(659.25, 0.14, 'sine', 0.09, 0.3);
         }
         playFanfare() {
             const notes = [523.25, 659.25, 783.99, 1046.5];
             notes.forEach((n, idx) => {
-                this.playTone(n, idx === 3 ? 0.35 : 0.11, 'square', 0.07, idx * 0.1);
+                const dur = idx === 3 ? 0.45 : 0.14;
+                this.playTone(n, dur, 'triangle', 0.08, idx * 0.095);
+                this.playTone(n * 2, dur * 0.7, 'sine', 0.03, idx * 0.095);
             });
         }
     }
 
-    // 45度等角投影 (2:1 Isometric)
-    function isoProject(gx, gy, gz, originX, originY) {
-        return {
-            x: Math.round(originX + (gx - gy)),
-            y: Math.round(originY + (gx + gy) * 0.5 - gz)
-        };
+    // 4 階水彩 Toon 漸層貼圖（加深陰影層次，使紅色機身與彩色糖果更飽和鮮豔）
+    function createToonGradientMap(THREE) {
+        const data = new Uint8Array([
+            92, 92, 92, 255,
+            148, 148, 148, 255,
+            208, 208, 208, 255,
+            255, 255, 255, 255
+        ]);
+        const tex = new THREE.DataTexture(data, 4, 1, THREE.RGBAFormat);
+        tex.minFilter = THREE.NearestFilter;
+        tex.magFilter = THREE.NearestFilter;
+        tex.generateMipmaps = false;
+        tex.needsUpdate = true;
+        return tex;
     }
 
-    function drawIsoPolygon(ctx, pts, fill, stroke) {
-        ctx.beginPath();
-        ctx.moveTo(pts[0].x, pts[0].y);
-        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-        ctx.closePath();
-        if (fill) {
-            ctx.fillStyle = fill;
+    // 程序化生成溫暖水彩筆觸與紙紋貼圖
+    function createWatercolorTexture(THREE, baseColor, accentColor, pattern = 'wash', labelText = '') {
+        const size = 256;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = baseColor;
+        ctx.fillRect(0, 0, size, size);
+
+        // 水彩暈染筆觸
+        for (let i = 0; i < 30; i++) {
+            const x = Math.random() * size;
+            const y = Math.random() * size;
+            const r = 24 + Math.random() * 54;
+            const grad = ctx.createRadialGradient(x, y, r * 0.1, x, y, r);
+            const col = i % 3 === 0 ? accentColor : (i % 2 === 0 ? 'rgba(255,250,238,0.12)' : 'rgba(92,54,28,0.10)');
+            grad.addColorStop(0, col);
+            grad.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
             ctx.fill();
         }
-        if (stroke) {
-            ctx.strokeStyle = stroke;
-            ctx.lineWidth = 1;
-            ctx.stroke();
+
+        if (pattern === 'wood') {
+            ctx.strokeStyle = 'rgba(64, 34, 14, 0.22)';
+            for (let y = 0; y < size; y += 32) {
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(size, y);
+                ctx.stroke();
+            }
+            ctx.strokeStyle = 'rgba(96, 52, 22, 0.18)';
+            ctx.lineWidth = 1.5;
+            for (let i = 0; i < 22; i++) {
+                const y = Math.random() * size;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.bezierCurveTo(size * 0.3, y + (Math.random() - 0.5) * 9, size * 0.7, y + (Math.random() - 0.5) * 9, size, y);
+                ctx.stroke();
+            }
+        } else if (pattern === 'rug') {
+            ctx.strokeStyle = '#ffbe0b';
+            ctx.lineWidth = 14;
+            ctx.strokeRect(18, 18, size - 36, size - 36);
+            ctx.strokeStyle = '#ffe5a3';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([10, 6]);
+            ctx.strokeRect(32, 32, size - 64, size - 64);
+            ctx.setLineDash([]);
+        } else if (pattern === 'striped') {
+            ctx.fillStyle = accentColor;
+            for (let x = 0; x < size; x += 32) {
+                ctx.fillRect(x, 0, 16, size);
+            }
+        } else if (pattern === 'snack') {
+            ctx.fillStyle = accentColor;
+            ctx.fillRect(0, 0, size, 48);
+            ctx.fillRect(0, size - 38, size, 38);
+            ctx.fillStyle = '#fff9ec';
+            ctx.fillRect(26, 70, size - 52, 102);
+            ctx.strokeStyle = '#4a2c1a';
+            ctx.lineWidth = 5;
+            ctx.strokeRect(26, 70, size - 52, 102);
+            ctx.fillStyle = accentColor;
+            for (let d = 0; d < 5; d++) {
+                ctx.beginPath();
+                ctx.arc(52 + d * 38, 121, 10, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        } else if (pattern === 'lollipop') {
+            ctx.translate(size / 2, size / 2);
+            for (let a = 0; a < 180; a++) {
+                const ang = a * 0.18;
+                const rad = a * 0.68;
+                ctx.fillStyle = a % 10 < 5 ? accentColor : '#fffdf7';
+                ctx.beginPath();
+                ctx.arc(Math.cos(ang) * rad, Math.sin(ang) * rad, 11, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+        } else if (pattern === 'vbanner') {
+            ctx.strokeStyle = '#ffdf8c';
+            ctx.lineWidth = 8;
+            ctx.strokeRect(14, 14, size - 28, size - 28);
+            ctx.fillStyle = '#fff9ec';
+            ctx.font = 'bold 44px "Noto Sans TC", serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const chars = (labelText || '懷舊童玩').split('');
+            chars.forEach((ch, idx) => {
+                ctx.fillText(ch, size / 2, 54 + idx * 50);
+            });
         }
+
+        // 水彩細微紙張顆粒
+        for (let i = 0; i < 420; i++) {
+            ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.06)' : 'rgba(60,35,18,0.04)';
+            ctx.fillRect(Math.random() * size, Math.random() * size, 2, 2);
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.encoding = THREE.sRGBEncoding;
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        return texture;
     }
 
-    // 繪製 45度等角立體方塊
-    function drawIsoBox(ctx, ox, oy, x, y, z, w, d, h, colTop, colLeft, colRight, outline = '#3a2214') {
-        const p000 = isoProject(x, y, z, ox, oy);
-        const p100 = isoProject(x + w, y, z, ox, oy);
-        const p110 = isoProject(x + w, y + d, z, ox, oy);
-        const p010 = isoProject(x, y + d, z, ox, oy);
+    // 繪製復古柑仔店琺瑯／鐵牌招牌貼圖
+    function createVintageSignTexture(THREE, bgColor, rimColor, title, subText, isRound = false) {
+        const size = 256;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
 
-        const p001 = isoProject(x, y, z + h, ox, oy);
-        const p101 = isoProject(x + w, y, z + h, ox, oy);
-        const p111 = isoProject(x + w, y + d, z + h, ox, oy);
-        const p011 = isoProject(x, y + d, z + h, ox, oy);
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, size, size);
 
-        drawIsoPolygon(ctx, [p010, p110, p111, p011], colLeft, outline);
-        drawIsoPolygon(ctx, [p110, p100, p101, p111], colRight, outline);
-        drawIsoPolygon(ctx, [p001, p101, p111, p011], colTop, outline);
+        // 水彩仿舊斑駁感
+        for (let i = 0; i < 18; i++) {
+            const x = Math.random() * size;
+            const y = Math.random() * size;
+            const r = 16 + Math.random() * 34;
+            const grad = ctx.createRadialGradient(x, y, 2, x, y, r);
+            grad.addColorStop(0, 'rgba(130, 82, 42, 0.14)');
+            grad.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        if (isRound) {
+            ctx.strokeStyle = rimColor;
+            ctx.lineWidth = 18;
+            ctx.beginPath();
+            ctx.arc(size / 2, size / 2, size * 0.43, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#3a2214';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(size / 2, size / 2, size * 0.36, 0, Math.PI * 2);
+            ctx.stroke();
+        } else {
+            ctx.strokeStyle = rimColor;
+            ctx.lineWidth = 16;
+            ctx.strokeRect(12, 12, size - 24, size - 24);
+            ctx.fillStyle = rimColor;
+            ctx.fillRect(12, size - 78, size - 24, 66);
+        }
+
+        ctx.fillStyle = isRound ? '#2c1a0e' : '#3a2214';
+        ctx.font = 'bold 54px "Noto Sans TC", serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(title, size / 2, isRound ? size * 0.43 : size * 0.40);
+
+        ctx.fillStyle = isRound ? rimColor : '#fff8eb';
+        ctx.font = 'bold 30px "Noto Sans TC", sans-serif';
+        ctx.fillText(subText, size / 2, isRound ? size * 0.67 : size * 0.81);
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.encoding = THREE.sRGBEncoding;
+        return tex;
     }
 
-    // 繪製像素風小扭蛋球
-    function drawPixelCapsule(ctx, cx, cy, r, topColor, bottomColor = '#fffaf0') {
-        const ir = Math.round(r);
-        ctx.fillStyle = '#3a2214';
-        ctx.fillRect(cx - ir - 1, cy - ir, ir * 2 + 2, ir * 2);
-        ctx.fillRect(cx - ir, cy - ir - 1, ir * 2, ir * 2 + 2);
+    // 繪製水彩風暖褐色描邊輪廓
+    function addInkOutline(THREE, mesh, scale = 1.035, color = 0x4a2c1a) {
+        const outlineMat = new THREE.MeshBasicMaterial({
+            color,
+            side: THREE.BackSide
+        });
+        const outline = new THREE.Mesh(mesh.geometry, outlineMat);
+        outline.scale.setScalar(scale);
+        mesh.add(outline);
+        return outline;
+    }
 
-        ctx.fillStyle = topColor;
-        ctx.fillRect(cx - ir, cy - ir, ir * 2, ir);
-        ctx.fillStyle = bottomColor;
-        ctx.fillRect(cx - ir, cy, ir * 2, ir);
-        ctx.fillStyle = '#5c3c28';
-        ctx.fillRect(cx - ir, cy, ir * 2, 1);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(cx - ir + 1, cy - ir + 1, Math.max(1, Math.floor(ir / 2)), 1);
+    // 製作雙色真實立體扭蛋球
+    function createCapsuleMesh(THREE, radius, topColor, gradientMap) {
+        const group = new THREE.Group();
+
+        const topGeo = new THREE.SphereGeometry(radius, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+        const topMat = new THREE.MeshToonMaterial({
+            color: topColor,
+            gradientMap
+        });
+        const topMesh = new THREE.Mesh(topGeo, topMat);
+        topMesh.castShadow = true;
+
+        const botGeo = new THREE.SphereGeometry(radius, 18, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
+        const botMat = new THREE.MeshToonMaterial({
+            color: 0xfff8eb,
+            gradientMap
+        });
+        const botMesh = new THREE.Mesh(botGeo, botMat);
+        botMesh.castShadow = true;
+
+        const seamGeo = new THREE.TorusGeometry(radius * 0.99, radius * 0.065, 6, 20);
+        const seamMat = new THREE.MeshBasicMaterial({ color: 0x4a2c1a });
+        const seamMesh = new THREE.Mesh(seamGeo, seamMat);
+        seamMesh.rotation.x = Math.PI / 2;
+
+        group.add(topMesh, botMesh, seamMesh);
+        return group;
     }
 
     class GachaScene {
         constructor(canvasId) {
             this.canvas = document.getElementById(canvasId);
-            this.ctx = this.canvas.getContext('2d');
-            this.canvas.width = LOGICAL_W;
-            this.canvas.height = LOGICAL_H;
-            this.ctx.imageSmoothingEnabled = false;
+            this.audio = new CozyAudio();
 
-            this.audio = new RetroAudio();
             this.state = 'idle';
             this.stateTimer = 0;
-            this.crankAngle = 0;
-            this.shakeOffset = { x: 0, y: 0 };
-            this.onBurstComplete = null;
             this.elapsed = 0;
+            this.settleTime = 0;
+            this.onBurstComplete = null;
 
-            const colors = ['#e04f33', '#234b8c', '#f5b841', '#3f915b', '#d96b98', '#ff8547'];
-            this.domeBalls = Array.from({ length: 11 }, (_, i) => ({
-                baseX: -12 + (i % 4) * 7 + ((i * 3) % 5 - 2),
-                baseY: -6 + Math.floor(i / 4) * 5,
-                x: 0,
-                y: 0,
-                color: colors[i % colors.length],
-                phase: i * 0.7
-            }));
-
-            this.dropBall = { x: 0, y: 0, z: 0, color: '#e04f33', visible: false };
-
-            // 溫暖店鋪裡的金色微塵
-            this.dustMotes = Array.from({ length: 20 }, () => ({
-                x: Math.random() * LOGICAL_W,
-                y: Math.random() * LOGICAL_H,
-                speedY: -0.05 - Math.random() * 0.1,
-                speedX: 0.04 + Math.random() * 0.07,
-                alpha: 0.25 + Math.random() * 0.45,
-                size: Math.random() > 0.7 ? 2 : 1
-            }));
-
+            this.mouseTarget = { x: 0, y: 0 };
+            this.mouseCurrent = { x: 0, y: 0 };
+            this.swayables = [];
+            this.capsules = [];
             this.sparkles = [];
+
+            if (!window.THREE) {
+                this.fallbackNoThree();
+                return;
+            }
+
+            this.THREE = window.THREE;
+            this.initThree();
+            this.buildShopBackdrop();
+            this.buildStorefrontShelves();
+            this.buildLanterns();
+            this.buildGachaMachine();
+            this.populateCapsules();
+            this.buildDustMotes();
+            this.bindEvents();
+
             this.lastTime = performance.now();
             this.loop = this.loop.bind(this);
             requestAnimationFrame(this.loop);
+        }
+
+        fallbackNoThree() {
+            const ctx = this.canvas.getContext('2d');
+            if (!ctx) return;
+            this.canvas.width = 640;
+            this.canvas.height = 480;
+            ctx.fillStyle = '#f2e2c4';
+            ctx.fillRect(0, 0, 640, 480);
+            ctx.fillStyle = '#4a2c1a';
+            ctx.font = 'bold 20px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('正在載入 3D 柑仔店場景（需連線載入 Three.js）...', 320, 240);
+        }
+
+        initThree() {
+            const THREE = this.THREE;
+            this.gradientMap = createToonGradientMap(THREE);
+
+            this.scene = new THREE.Scene();
+            this.scene.background = new THREE.Color(0xf0dec0);
+            this.scene.fog = new THREE.FogExp2(0xf0dec0, 0.018);
+
+            const parent = this.canvas.parentElement;
+            const w = Math.max(320, parent ? parent.clientWidth : 640);
+            const h = Math.max(240, parent ? parent.clientHeight : 480);
+
+            this.baseCamPos = new THREE.Vector3(4.85, 3.95, 6.65);
+            this.camLookAt = new THREE.Vector3(0.0, 1.85, -0.35);
+
+            this.camera = new THREE.PerspectiveCamera(37, w / h, 0.1, 60);
+            this.camera.position.copy(this.baseCamPos);
+            this.camera.lookAt(this.camLookAt);
+
+            this.renderer = new THREE.WebGLRenderer({
+                canvas: this.canvas,
+                antialias: true,
+                alpha: false
+            });
+            this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+            this.renderer.setSize(w, h, false);
+            this.renderer.outputEncoding = THREE.sRGBEncoding;
+            this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            this.renderer.toneMappingExposure = 0.96;
+            this.renderer.shadowMap.enabled = true;
+            this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+            // 溫暖柑仔店屋簷燈光與午後陽光
+            const hemi = new THREE.HemisphereLight(0xfff4df, 0x9b6538, 0.65);
+            this.scene.add(hemi);
+
+            const sun = new THREE.DirectionalLight(0xffe1ad, 0.8);
+            sun.position.set(-3.8, 7.8, 5.4);
+            sun.castShadow = true;
+            sun.shadow.mapSize.width = 2048;
+            sun.shadow.mapSize.height = 2048;
+            sun.shadow.camera.near = 1;
+            sun.shadow.camera.far = 25;
+            const d = 5.8;
+            sun.shadow.camera.left = -d;
+            sun.shadow.camera.right = d;
+            sun.shadow.camera.top = d;
+            sun.shadow.camera.bottom = -d;
+            sun.shadow.bias = -0.0008;
+            sun.shadow.normalBias = 0.02;
+            this.scene.add(sun);
+
+            const rimLight = new THREE.DirectionalLight(0xffcf9e, 0.28);
+            rimLight.position.set(6.0, 4.2, -3.5);
+            this.scene.add(rimLight);
+
+            const lanternGlowR = new THREE.PointLight(0xffb44c, 0.52, 11);
+            lanternGlowR.position.set(2.8, 2.9, -1.5);
+            this.scene.add(lanternGlowR);
+
+            const lanternGlowL = new THREE.PointLight(0xffcb78, 0.36, 9);
+            lanternGlowL.position.set(-2.8, 2.6, -1.5);
+            this.scene.add(lanternGlowL);
+        }
+
+        toonMat(color, map = null, extra = {}) {
+            const THREE = this.THREE;
+            return new THREE.MeshToonMaterial({
+                color,
+                map,
+                gradientMap: this.gradientMap,
+                ...extra
+            });
+        }
+
+        buildShopBackdrop() {
+            const THREE = this.THREE;
+            const floorWoodTex = createWatercolorTexture(THREE, '#bf844b', 'rgba(102, 56, 22, 0.25)', 'wood');
+            floorWoodTex.repeat.set(3, 2);
+
+            const wallWoodTex = createWatercolorTexture(THREE, '#7c4520', 'rgba(46, 24, 10, 0.28)', 'wood');
+            wallWoodTex.repeat.set(2, 2);
+
+            const plasterTex = createWatercolorTexture(THREE, '#e8cfa6', 'rgba(184, 146, 100, 0.26)', 'plaster');
+            const rugTex = createWatercolorTexture(THREE, '#c92a22', 'rgba(145, 22, 16, 0.3)', 'rug');
+
+            // 溫暖木地板
+            const floor = new THREE.Mesh(
+                new THREE.BoxGeometry(11.0, 0.2, 8.2),
+                this.toonMat(0xffffff, floorWoodTex)
+            );
+            floor.position.set(0, -0.1, 0);
+            floor.receiveShadow = true;
+            this.scene.add(floor);
+
+            // 機台下方復古紅金編織墊
+            const rug = new THREE.Mesh(
+                new THREE.BoxGeometry(2.35, 0.03, 2.85),
+                this.toonMat(0xffffff, rugTex)
+            );
+            rug.position.set(0, 0.015, 0.65);
+            rug.receiveShadow = true;
+            this.scene.add(rug);
+
+            // 後方開放店鋪木板牆 (-Z) 與左側暖色木牆 (-X)
+            const backWall = new THREE.Mesh(
+                new THREE.BoxGeometry(10.6, 4.6, 0.2),
+                this.toonMat(0xffffff, wallWoodTex)
+            );
+            backWall.position.set(0, 2.3, -2.78);
+            backWall.receiveShadow = true;
+            this.scene.add(backWall);
+
+            const leftWall = new THREE.Mesh(
+                new THREE.BoxGeometry(0.2, 4.6, 7.6),
+                this.toonMat(0xffffff, plasterTex)
+            );
+            leftWall.position.set(-4.55, 2.3, 0.3);
+            leftWall.receiveShadow = true;
+            this.scene.add(leftWall);
+
+            const leftWainscot = new THREE.Mesh(
+                new THREE.BoxGeometry(0.26, 1.15, 7.6),
+                this.toonMat(0xffffff, wallWoodTex)
+            );
+            leftWainscot.position.set(-4.52, 0.575, 0.3);
+            leftWainscot.receiveShadow = true;
+            this.scene.add(leftWainscot);
+
+            // 傳統木頭立柱與屋簷橫樑
+            const beamMat = this.toonMat(0x5c3216);
+            [-4.2, -1.6, 1.6, 4.2].forEach(px => {
+                const post = new THREE.Mesh(new THREE.BoxGeometry(0.2, 4.4, 0.24), beamMat);
+                post.position.set(px, 2.2, -2.62);
+                post.castShadow = true;
+                this.scene.add(post);
+            });
+
+            const topBeam = new THREE.Mesh(new THREE.BoxGeometry(9.2, 0.2, 0.36), beamMat);
+            topBeam.position.set(0, 3.92, -2.42);
+            this.scene.add(topBeam);
+
+            // 傳統木造斜屋簷（仿台式柑仔店門口斜瓦／條紋遮雨簷）
+            const eaveTex = createWatercolorTexture(THREE, '#2e5d40', '#1f442d', 'striped');
+            const eaveRoof = new THREE.Mesh(
+                new THREE.BoxGeometry(9.4, 0.14, 1.05),
+                this.toonMat(0xffffff, eaveTex)
+            );
+            eaveRoof.position.set(0, 4.18, -2.18);
+            eaveRoof.rotation.x = 0.25;
+            eaveRoof.castShadow = true;
+            this.scene.add(eaveRoof);
+
+            // 屋簷下一字排開的台式復古鐵牌招牌
+            const signSpecs = [
+                { x: -2.75, round: false, bg: '#fff5e0', rim: '#26633b', title: '古早糖', sub: '雜貨鋪' },
+                { x: -1.42, round: true,  bg: '#fff9ed', rim: '#d92316', title: '平興',   sub: '柑仔店' },
+                { x: 0.0,   round: false, bg: '#fff7e6', rim: '#d92316', title: '榮冠果', sub: '數理汽水' },
+                { x: 1.42,  round: true,  bg: '#fff9ed', rim: '#c43227', title: '黑松',   sub: '汽水' },
+                { x: 2.75,  round: true,  bg: '#f7efd9', rim: '#1c64d1', title: '良心',   sub: '抽抽樂' }
+            ];
+            signSpecs.forEach(sp => {
+                const tex = createVintageSignTexture(THREE, sp.bg, sp.rim, sp.title, sp.sub, sp.round);
+                const geo = sp.round
+                    ? new THREE.CylinderGeometry(0.46, 0.46, 0.06, 24)
+                    : new THREE.BoxGeometry(1.06, 0.72, 0.06);
+                const sign = new THREE.Mesh(geo, this.toonMat(0xffffff, tex));
+                if (sp.round) {
+                    sign.rotation.x = Math.PI / 2 + 0.08;
+                } else {
+                    sign.rotation.x = 0.08;
+                }
+                sign.position.set(sp.x, 3.52, -2.18);
+                sign.castShadow = true;
+                addInkOutline(THREE, sign, 1.03);
+                this.scene.add(sign);
+            });
+
+            // 右側木柱上的直式紅底招牌布條
+            const bannerTex = createWatercolorTexture(THREE, '#c92a22', 'rgba(130, 16, 12, 0.35)', 'vbanner', '古早柑仔');
+            const banner = new THREE.Mesh(
+                new THREE.BoxGeometry(0.36, 1.48, 0.05),
+                this.toonMat(0xffffff, bannerTex)
+            );
+            banner.position.set(4.12, 2.08, -2.35);
+            banner.rotation.y = -0.18;
+            addInkOutline(THREE, banner, 1.04);
+            this.scene.add(banner);
+        }
+
+        // 整齊開放式柑仔店貨架：上方兩層牆面開放長架 + 下方左右階梯式貨台 + 玻璃糖果罐
+        buildStorefrontShelves() {
+            const THREE = this.THREE;
+            const shelfWoodTex = createWatercolorTexture(THREE, '#b9783e', 'rgba(72,38,14,0.24)', 'wood');
+            const shelfMat = this.toonMat(0xffffff, shelfWoodTex);
+            const darkWoodMat = this.toonMat(0x6e3a18);
+
+            // 1. 上方牆面兩層開放長層架（橫貫後方，擺放整齊糖果罐與鐵盒）
+            [2.68, 2.04].forEach(sy => {
+                const plank = new THREE.Mesh(new THREE.BoxGeometry(7.8, 0.08, 0.62), shelfMat);
+                plank.position.set(0, sy, -2.38);
+                plank.castShadow = true;
+                plank.receiveShadow = true;
+                this.scene.add(plank);
+            });
+
+            const glassJarMat = new THREE.MeshStandardMaterial({
+                color: 0xaad9eb,
+                transparent: true,
+                opacity: 0.36,
+                roughness: 0.08,
+                metalness: 0.08,
+                depthWrite: false
+            });
+
+            const createCandyJar = (r, h, lidColor, candyColors) => {
+                const jGroup = new THREE.Group();
+                for (let c = 0; c < 14; c++) {
+                    const ang = c * 2.1;
+                    const rad = (c % 3) * (r * 0.28);
+                    const cy = 0.06 + Math.floor(c / 4) * 0.07;
+                    const sphere = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.046, 10, 8),
+                        this.toonMat(candyColors[c % candyColors.length])
+                    );
+                    sphere.position.set(Math.cos(ang) * rad, cy, Math.sin(ang) * rad);
+                    jGroup.add(sphere);
+                }
+                const glass = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 16), glassJarMat);
+                glass.position.y = h / 2;
+                glass.renderOrder = 4;
+                jGroup.add(glass);
+
+                const rim = new THREE.Mesh(
+                    new THREE.TorusGeometry(r, 0.011, 6, 16),
+                    this.toonMat(0x5b7f91)
+                );
+                rim.rotation.x = Math.PI / 2;
+                rim.position.y = h * 0.96;
+                jGroup.add(rim);
+
+                const lid = new THREE.Mesh(
+                    new THREE.CylinderGeometry(r * 0.88, r * 0.92, 0.075, 16),
+                    this.toonMat(lidColor)
+                );
+                lid.position.y = h + 0.03;
+                addInkOutline(THREE, lid, 1.05);
+                jGroup.add(lid);
+                return jGroup;
+            };
+
+            // 上層 (y = 2.72)：左右整齊排列鐵盒餅乾與圓罐，中央預留與糖果罐整齊並排
+            const topTins = [
+                { x: -3.45, w: 0.42, h: 0.34, col: 0xd92316 },
+                { x: -2.92, w: 0.42, h: 0.34, col: 0xffbe0b },
+                { x: -2.40, w: 0.38, h: 0.32, col: 0x1ea85a },
+                { x:  2.40, w: 0.38, h: 0.32, col: 0x1c64d1 },
+                { x:  2.92, w: 0.42, h: 0.34, col: 0xd92316 },
+                { x:  3.45, w: 0.42, h: 0.34, col: 0xff7b00 }
+            ];
+            topTins.forEach(t => {
+                const tin = new THREE.Mesh(
+                    new THREE.BoxGeometry(t.w, t.h, 0.34),
+                    this.toonMat(t.col)
+                );
+                tin.position.set(t.x, 2.72 + t.h / 2, -2.36);
+                tin.castShadow = true;
+                addInkOutline(THREE, tin, 1.04);
+                this.scene.add(tin);
+            });
+
+            // 上層中央整齊排列 6 罐玻璃糖果罐
+            const upperJarXs = [-1.82, -1.28, -0.74, 0.74, 1.28, 1.82];
+            const lidPalette = [0xe62929, 0x1c64d1, 0xffbe0b, 0x1ea85a, 0xe84393, 0xff7b00];
+            upperJarXs.forEach((jx, idx) => {
+                const jar = createCandyJar(0.16, 0.42, lidPalette[idx], [
+                    CAPSULE_COLORS[idx],
+                    CAPSULE_COLORS[(idx + 2) % CAPSULE_COLORS.length],
+                    0xfff5d6
+                ]);
+                jar.position.set(jx, 2.72, -2.35);
+                this.scene.add(jar);
+            });
+
+            // 中層 (y = 2.08)：整齊一排 10 罐彩色玻璃糖果罐＋彩色罐裝零食
+            const midXs = [-3.4, -2.85, -2.3, -1.75, -1.2, 1.2, 1.75, 2.3, 2.85, 3.4];
+            midXs.forEach((mx, idx) => {
+                if (idx % 3 === 1) {
+                    const can = new THREE.Mesh(
+                        new THREE.CylinderGeometry(0.16, 0.16, 0.38, 16),
+                        this.toonMat(lidPalette[(idx + 1) % lidPalette.length])
+                    );
+                    can.position.set(mx, 2.08 + 0.19, -2.34);
+                    can.castShadow = true;
+                    addInkOutline(THREE, can, 1.04);
+                    this.scene.add(can);
+                } else {
+                    const jar = createCandyJar(0.16, 0.4, lidPalette[idx % lidPalette.length], [
+                        CAPSULE_COLORS[idx % CAPSULE_COLORS.length],
+                        CAPSULE_COLORS[(idx + 3) % CAPSULE_COLORS.length]
+                    ]);
+                    jar.position.set(mx, 2.08, -2.34);
+                    this.scene.add(jar);
+                }
+            });
+
+            // 2. 下方左右兩側「階梯式開放陳列木台」（如同傳統柑仔店門口層層整齊擺滿糖果盒與餅乾盤）
+            const buildSteppedCounterSide = (sideSign) => {
+                const group = new THREE.Group();
+                const centerX = sideSign * 2.55;
+                group.position.set(centerX, 0, -1.35);
+
+                // 後階高台 (z = -0.35, top y = 1.15)
+                const backTier = new THREE.Mesh(new THREE.BoxGeometry(2.55, 1.15, 0.72), shelfMat);
+                backTier.position.set(0, 0.575, -0.38);
+                backTier.castShadow = true;
+                backTier.receiveShadow = true;
+                addInkOutline(THREE, backTier, 1.02);
+                group.add(backTier);
+
+                // 前階低台 (z = +0.28, top y = 0.68)
+                const frontTier = new THREE.Mesh(new THREE.BoxGeometry(2.55, 0.68, 0.64), darkWoodMat);
+                frontTier.position.set(0, 0.34, 0.28);
+                frontTier.castShadow = true;
+                frontTier.receiveShadow = true;
+                addInkOutline(THREE, frontTier, 1.02);
+                group.add(frontTier);
+
+                // 後階台面 (y = 1.15)：整齊一排 5 盒彩色戳戳樂／糖果盒／零食包
+                const boxPalettes = [
+                    ['#ffe394', '#e62929'],
+                    ['#d8f5e3', '#1ea85a'],
+                    ['#dcebff', '#1c64d1'],
+                    ['#ffdce8', '#e84393'],
+                    ['#ffe7cc', '#ff7b00']
+                ];
+                for (let i = 0; i < 5; i++) {
+                    const [bg, acc] = boxPalettes[(i + (sideSign > 0 ? 2 : 0)) % boxPalettes.length];
+                    const tex = createWatercolorTexture(THREE, bg, acc, 'snack');
+                    const box = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.42, 0.44, 0.34),
+                        this.toonMat(0xffffff, tex)
+                    );
+                    box.position.set(-0.96 + i * 0.48, 1.15 + 0.22, -0.38);
+                    box.castShadow = true;
+                    addInkOutline(THREE, box, 1.03);
+                    group.add(box);
+                }
+
+                // 前階台面 (y = 0.68)：整齊一排 4 個開放式糖果盤與玻璃罐
+                for (let i = 0; i < 4; i++) {
+                    const tx = -0.84 + i * 0.56;
+                    if (sideSign < 0 && i === 3) {
+                        // 左側靠中擺一筒彩色漩渦棒棒糖（不被機台遮擋）
+                        const pot = new THREE.Mesh(
+                            new THREE.CylinderGeometry(0.14, 0.11, 0.26, 14),
+                            this.toonMat(0x2c6e85)
+                        );
+                        pot.position.set(tx, 0.68 + 0.13, 0.30);
+                        pot.castShadow = true;
+                        addInkOutline(THREE, pot, 1.04);
+                        group.add(pot);
+
+                        const lolliCols = ['#e62929', '#1c64d1', '#1ea85a', '#e84393', '#ffbe0b'];
+                        lolliCols.forEach((lc, li) => {
+                            const lg = new THREE.Group();
+                            lg.position.set(tx, 0.84, 0.30);
+                            lg.rotation.z = (li - 2) * 0.2;
+                            const stick = new THREE.Mesh(
+                                new THREE.CylinderGeometry(0.011, 0.011, 0.38, 8),
+                                this.toonMat(0xfff5e4)
+                            );
+                            stick.position.y = 0.19;
+                            const lTex = createWatercolorTexture(THREE, '#fffdf7', lc, 'lollipop');
+                            const disc = new THREE.Mesh(
+                                new THREE.CylinderGeometry(0.1, 0.1, 0.032, 16),
+                                this.toonMat(0xffffff, lTex)
+                            );
+                            disc.rotation.x = Math.PI / 2;
+                            disc.position.y = 0.4;
+                            addInkOutline(THREE, disc, 1.06);
+                            lg.add(stick, disc);
+                            group.add(lg);
+                        });
+                    } else if (i % 2 === 0) {
+                        // 開放木托盤裝滿彩色糖果球
+                        const tray = new THREE.Mesh(
+                            new THREE.BoxGeometry(0.46, 0.09, 0.42),
+                            shelfMat
+                        );
+                        tray.position.set(tx, 0.68 + 0.045, 0.28);
+                        tray.castShadow = true;
+                        addInkOutline(THREE, tray, 1.03);
+                        group.add(tray);
+
+                        for (let c = 0; c < 8; c++) {
+                            const cx = (c % 4 - 1.5) * 0.095;
+                            const cz = (Math.floor(c / 4) - 0.5) * 0.12;
+                            const candy = new THREE.Mesh(
+                                new THREE.SphereGeometry(0.048, 10, 8),
+                                this.toonMat(CAPSULE_COLORS[(c + i) % CAPSULE_COLORS.length])
+                            );
+                            candy.position.set(tx + cx, 0.77, 0.28 + cz);
+                            group.add(candy);
+                        }
+                    } else {
+                        // 小玻璃糖果罐
+                        const jar = createCandyJar(0.15, 0.36, lidPalette[(i + 2) % lidPalette.length], [
+                            CAPSULE_COLORS[i],
+                            CAPSULE_COLORS[(i + 3) % CAPSULE_COLORS.length],
+                            0xfff5d6
+                        ]);
+                        jar.position.set(tx, 0.68, 0.28);
+                        group.add(jar);
+                    }
+                }
+
+                this.scene.add(group);
+            };
+
+            buildSteppedCounterSide(-1);
+            buildSteppedCounterSide(1);
+
+            // 右前方地面：彈珠汽水木箱與 6 支藍綠玻璃瓶
+            const crateGroup = new THREE.Group();
+            crateGroup.position.set(2.35, 0, 0.35);
+            crateGroup.rotation.y = -0.35;
+
+            const crate = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.34, 0.68), darkWoodMat);
+            crate.position.set(0, 0.17, 0);
+            crate.castShadow = true;
+            crate.receiveShadow = true;
+            addInkOutline(THREE, crate, 1.03);
+            crateGroup.add(crate);
+
+            const bottleColors = [0x5bc0eb, 0x52c48c, 0x5bc0eb, 0x70d1ff, 0x52c48c, 0x5bc0eb];
+            for (let r = 0; r < 2; r++) {
+                for (let c = 0; c < 3; c++) {
+                    const idx = r * 3 + c;
+                    const bGroup = new THREE.Group();
+                    bGroup.position.set(-0.26 + c * 0.26, 0.34, -0.14 + r * 0.28);
+
+                    const bMat = new THREE.MeshStandardMaterial({
+                        color: bottleColors[idx],
+                        transparent: true,
+                        opacity: 0.78,
+                        roughness: 0.15
+                    });
+                    const bBody = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.075, 0.26, 12), bMat);
+                    bBody.position.y = 0.13;
+                    bBody.castShadow = true;
+
+                    const bNeck = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.055, 0.13, 12), bMat);
+                    bNeck.position.y = 0.31;
+
+                    const cap = new THREE.Mesh(
+                        new THREE.CylinderGeometry(0.042, 0.042, 0.04, 12),
+                        this.toonMat(0x1c64d1)
+                    );
+                    cap.position.y = 0.38;
+
+                    bGroup.add(bBody, bNeck, cap);
+                    crateGroup.add(bGroup);
+                }
+            }
+            this.scene.add(crateGroup);
+        }
+
+        buildLanterns() {
+            const THREE = this.THREE;
+            const lanternPositions = [
+                { x: -3.55, y: 3.12, z: -1.68, color: 0xe63928 },
+                { x: 3.55,  y: 3.12, z: -1.68, color: 0xf4a836 }
+            ];
+
+            lanternPositions.forEach((lp, idx) => {
+                const pivot = new THREE.Group();
+                pivot.position.set(lp.x, lp.y + 0.55, lp.z);
+
+                const cord = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.015, 0.015, 0.55, 6),
+                    this.toonMat(0x3a2214)
+                );
+                cord.position.y = -0.275;
+                pivot.add(cord);
+
+                const bodyMat = new THREE.MeshToonMaterial({
+                    color: lp.color,
+                    gradientMap: this.gradientMap,
+                    emissive: 0xff8a2b,
+                    emissiveIntensity: 0.42
+                });
+                const lanternBody = new THREE.Mesh(new THREE.SphereGeometry(0.28, 18, 14), bodyMat);
+                lanternBody.scale.set(0.92, 1.22, 0.92);
+                lanternBody.position.y = -0.84;
+                lanternBody.castShadow = true;
+                addInkOutline(THREE, lanternBody, 1.04);
+                pivot.add(lanternBody);
+
+                const capMat = this.toonMat(0x4a2c1a);
+                const topCap = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.06, 14), capMat);
+                topCap.position.y = -0.5;
+                const botCap = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.12, 0.06, 14), capMat);
+                botCap.position.y = -1.18;
+                pivot.add(topCap, botCap);
+
+                this.scene.add(pivot);
+                this.swayables.push({ obj: pivot, phase: idx * 1.4, amp: 0.05, speed: 0.0021, axis: 'z' });
+            });
+        }
+
+        buildGachaMachine() {
+            const THREE = this.THREE;
+            this.machineGroup = new THREE.Group();
+            this.machineGroup.position.set(0, 0, 0.25);
+
+            // 更鮮豔飽和的扭蛋機專屬配色
+            const redMat = this.toonMat(0xd92316);
+            const goldMat = this.toonMat(0xffb703);
+            const walnutMat = this.toonMat(0x52311b);
+            const creamMat = this.toonMat(0xfff7e6);
+            const darkMat = this.toonMat(0x2c1a0e);
+
+            // 1. 底座（胡桃木底盤 + 鮮明金色腰線）
+            const basePlinth = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.24, 1.72), walnutMat);
+            basePlinth.position.set(0, 0.12, 0);
+            basePlinth.castShadow = true;
+            basePlinth.receiveShadow = true;
+            addInkOutline(THREE, basePlinth, 1.025);
+            this.machineGroup.add(basePlinth);
+
+            const baseTrim = new THREE.Mesh(new THREE.BoxGeometry(1.58, 0.08, 1.58), goldMat);
+            baseTrim.position.set(0, 0.28, 0);
+            baseTrim.castShadow = true;
+            this.machineGroup.add(baseTrim);
+
+            // 2. 下層鮮豔朱紅機身（+ 圓潤邊角柱）
+            const body = new THREE.Mesh(new THREE.BoxGeometry(1.42, 1.38, 1.42), redMat);
+            body.position.set(0, 1.01, 0);
+            body.castShadow = true;
+            body.receiveShadow = true;
+            addInkOutline(THREE, body, 1.028);
+            this.machineGroup.add(body);
+
+            [
+                [-0.66, -0.66], [0.66, -0.66],
+                [-0.66, 0.66],  [0.66, 0.66]
+            ].forEach(([cx, cz]) => {
+                const col = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.38, 12), redMat);
+                col.position.set(cx, 1.01, cz);
+                this.machineGroup.add(col);
+            });
+
+            // 3. 正面 (+Z) 出蛋口與擋片
+            const chuteFrame = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.48, 0.14), goldMat);
+            chuteFrame.position.set(0, 0.62, 0.72);
+            addInkOutline(THREE, chuteFrame, 1.04);
+            this.machineGroup.add(chuteFrame);
+
+            const chuteHole = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.34, 0.16), darkMat);
+            chuteHole.position.set(0, 0.62, 0.73);
+            this.machineGroup.add(chuteHole);
+
+            const chuteTray = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.06, 0.24), goldMat);
+            chuteTray.position.set(0, 0.41, 0.81);
+            chuteTray.castShadow = true;
+            this.machineGroup.add(chuteTray);
+
+            this.chuteFlapPivot = new THREE.Group();
+            this.chuteFlapPivot.position.set(0, 0.77, 0.8);
+            const flapMesh = new THREE.Mesh(
+                new THREE.BoxGeometry(0.42, 0.28, 0.03),
+                new THREE.MeshStandardMaterial({
+                    color: 0xffeed6,
+                    transparent: true,
+                    opacity: 0.65,
+                    roughness: 0.2
+                })
+            );
+            flapMesh.position.y = -0.14;
+            this.chuteFlapPivot.add(flapMesh);
+            this.machineGroup.add(this.chuteFlapPivot);
+
+            // 4. 正面 (+Z) 米白金屬銘牌與投幣口
+            const plateBorder = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.56, 0.06), goldMat);
+            plateBorder.position.set(0, 1.29, 0.72);
+            addInkOutline(THREE, plateBorder, 1.03);
+            this.machineGroup.add(plateBorder);
+
+            const plateFace = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.46, 0.07), creamMat);
+            plateFace.position.set(0, 1.29, 0.73);
+            this.machineGroup.add(plateFace);
+
+            const coinSlot = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.04), darkMat);
+            coinSlot.position.set(0.35, 1.29, 0.76);
+            this.machineGroup.add(coinSlot);
+
+            // 5. 嚴格貼齊機台正面 (+Z) 的立體旋鈕
+            this.knobGroup = new THREE.Group();
+            this.knobGroup.position.set(-0.04, 1.29, 0.76);
+
+            const bezel = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.23, 0.06, 24), goldMat);
+            bezel.rotation.x = Math.PI / 2;
+            bezel.castShadow = true;
+            addInkOutline(THREE, bezel, 1.05);
+            this.knobGroup.add(bezel);
+
+            const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.1, 0.1, 20), this.toonMat(0xffe066));
+            hub.rotation.x = Math.PI / 2;
+            hub.position.z = 0.04;
+            this.knobGroup.add(hub);
+
+            const handleBar = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.085, 0.075), this.toonMat(0xffd646));
+            handleBar.position.z = 0.075;
+            handleBar.castShadow = true;
+            addInkOutline(THREE, handleBar, 1.06);
+            this.knobGroup.add(handleBar);
+
+            this.machineGroup.add(this.knobGroup);
+
+            // 6. 圓形透明玻璃球罩 (center y = 2.60, R = 1.10) 與無縫貼合的上下接環/球冠上蓋
+            this.globeCenterY = 2.60;
+            this.globeRadius = 1.10;
+            const capOffsetY = 0.76;
+            const rimRadius = Math.sqrt(this.globeRadius * this.globeRadius - capOffsetY * capOffsetY); // ~0.795
+
+            // 底部金色接環：上緣精準貼合球體 y = 2.60 - 0.76 = 1.84 的圓周半徑
+            const collar = new THREE.Mesh(
+                new THREE.CylinderGeometry(rimRadius + 0.015, 0.94, 0.16, 32),
+                goldMat
+            );
+            collar.position.set(0, 1.77, 0);
+            collar.castShadow = true;
+            addInkOutline(THREE, collar, 1.03);
+            this.machineGroup.add(collar);
+
+            const bottomRim = new THREE.Mesh(
+                new THREE.TorusGeometry(rimRadius + 0.01, 0.032, 10, 32),
+                goldMat
+            );
+            bottomRim.rotation.x = Math.PI / 2;
+            bottomRim.position.set(0, this.globeCenterY - capOffsetY + 0.01, 0);
+            this.machineGroup.add(bottomRim);
+
+            this.globeAnchor = new THREE.Group();
+            this.globeAnchor.position.set(0, this.globeCenterY, 0);
+            this.machineGroup.add(this.globeAnchor);
+
+            // 自訂 Fresnel 玻璃球材質
+            const glassMat = new THREE.ShaderMaterial({
+                transparent: true,
+                depthWrite: false,
+                vertexShader: `
+                    varying vec3 vNormalView;
+                    varying vec3 vViewPos;
+                    void main() {
+                        vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+                        vNormalView = normalize(normalMatrix * normal);
+                        vViewPos = -mvPos.xyz;
+                        gl_Position = projectionMatrix * mvPos;
+                    }
+                `,
+                fragmentShader: `
+                    varying vec3 vNormalView;
+                    varying vec3 vViewPos;
+                    void main() {
+                        vec3 n = normalize(vNormalView);
+                        vec3 v = normalize(vViewPos);
+                        float rim = 1.0 - max(dot(n, v), 0.0);
+                        float edge = pow(rim, 2.2);
+                        float outline = smoothstep(0.75, 0.93, rim);
+                        vec3 glassCol = mix(vec3(0.84, 0.95, 0.99), vec3(0.30, 0.52, 0.66), outline);
+                        float alpha = 0.08 + edge * 0.44 + outline * 0.38;
+                        gl_FragColor = vec4(glassCol, clamp(alpha, 0.0, 0.86));
+                    }
+                `
+            });
+            const glassGlobe = new THREE.Mesh(new THREE.SphereGeometry(this.globeRadius, 36, 26), glassMat);
+            glassGlobe.renderOrder = 6;
+            this.globeAnchor.add(glassGlobe);
+
+            // 玻璃球左上角柔和反光弧
+            const sheenMat = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.48,
+                depthWrite: false
+            });
+            const sheen = new THREE.Mesh(
+                new THREE.SphereGeometry(this.globeRadius * 1.004, 18, 12, 0.6, 0.34, 0.45, 0.68),
+                sheenMat
+            );
+            sheen.renderOrder = 7;
+            this.globeAnchor.add(sheen);
+
+            // 7. 圓弧球冠頂蓋（與玻璃球同心同曲率，緊密貼合零縫隙！）
+            const capAngle = Math.acos(capOffsetY / this.globeRadius);
+            const topCap = new THREE.Mesh(
+                new THREE.SphereGeometry(this.globeRadius + 0.018, 32, 16, 0, Math.PI * 2, 0, capAngle),
+                redMat
+            );
+            topCap.position.set(0, this.globeCenterY, 0);
+            topCap.castShadow = true;
+            addInkOutline(THREE, topCap, 1.028);
+            this.machineGroup.add(topCap);
+
+            // 上蓋與玻璃球交界處的金色圓環飾條
+            const capRim = new THREE.Mesh(
+                new THREE.TorusGeometry(rimRadius + 0.012, 0.036, 10, 32),
+                goldMat
+            );
+            capRim.rotation.x = Math.PI / 2;
+            capRim.position.set(0, this.globeCenterY + capOffsetY, 0);
+            addInkOutline(THREE, capRim, 1.04);
+            this.machineGroup.add(capRim);
+
+            // 頂部金色鎖蓋與球形把手
+            const topLockPlate = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.34, 0.06, 20), goldMat);
+            topLockPlate.position.set(0, 3.71, 0);
+            topLockPlate.castShadow = true;
+            addInkOutline(THREE, topLockPlate, 1.04);
+            this.machineGroup.add(topLockPlate);
+
+            const finial = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 12), goldMat);
+            finial.position.set(0, 3.81, 0);
+            addInkOutline(THREE, finial, 1.06);
+            this.machineGroup.add(finial);
+
+            // 8. 掉落中扭蛋球（初始隱藏）
+            this.dropCapsule = createCapsuleMesh(THREE, 0.23, CAPSULE_COLORS[0], this.gradientMap);
+            this.dropCapsule.visible = false;
+            this.machineGroup.add(this.dropCapsule);
+
+            this.scene.add(this.machineGroup);
+        }
+
+        populateCapsules() {
+            const THREE = this.THREE;
+            const count = 40;
+            this.capsuleRadius = 0.175;
+            // 安全內半徑，確保球體（含接縫線）始終完整留在玻璃球內壁與上蓋下方 (1.10 - 0.175 - 0.095 = 0.83)
+            this.safeRadius = this.globeRadius - this.capsuleRadius - 0.095;
+
+            const positions = [];
+            for (let i = 0; i < count; i++) {
+                const layer = Math.floor(i / 9);
+                const angle = (i % 9) * ((Math.PI * 2) / 9) + layer * 0.42;
+                const rad = 0.2 + (i % 3) * 0.2;
+                const y = -0.68 + layer * 0.24;
+                const p = new THREE.Vector3(Math.cos(angle) * rad, y, Math.sin(angle) * rad);
+                if (p.length() > this.safeRadius) p.setLength(this.safeRadius);
+                positions.push(p);
+            }
+
+            const minDist = this.capsuleRadius * 2.04;
+            for (let iter = 0; iter < 54; iter++) {
+                for (let i = 0; i < count; i++) {
+                    positions[i].y -= 0.015;
+                    for (let j = i + 1; j < count; j++) {
+                        const delta = new THREE.Vector3().subVectors(positions[j], positions[i]);
+                        const dist = delta.length();
+                        if (dist > 0.0001 && dist < minDist) {
+                            const push = (minDist - dist) * 0.5;
+                            delta.normalize().multiplyScalar(push);
+                            positions[i].sub(delta);
+                            positions[j].add(delta);
+                        }
+                    }
+                    if (positions[i].length() > this.safeRadius) {
+                        positions[i].setLength(this.safeRadius);
+                    }
+                    if (positions[i].y < -0.72) positions[i].y = -0.72;
+                    if (positions[i].y > 0.65) positions[i].y = 0.65;
+                }
+            }
+
+            for (let i = 0; i < count; i++) {
+                const col = CAPSULE_COLORS[i % CAPSULE_COLORS.length];
+                const mesh = createCapsuleMesh(THREE, this.capsuleRadius, col, this.gradientMap);
+                mesh.position.copy(positions[i]);
+                mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+                this.globeAnchor.add(mesh);
+
+                this.capsules.push({
+                    mesh,
+                    restPos: positions[i].clone(),
+                    vel: new THREE.Vector3(),
+                    phase: i * 1.37,
+                    rotVel: new THREE.Vector3(
+                        (Math.random() - 0.5) * 0.14,
+                        (Math.random() - 0.5) * 0.14,
+                        (Math.random() - 0.5) * 0.14
+                    )
+                });
+            }
+        }
+
+        buildDustMotes() {
+            const THREE = this.THREE;
+            const count = 36;
+            const positions = new Float32Array(count * 3);
+            this.dustSpeeds = [];
+
+            for (let i = 0; i < count; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * 7.5;
+                positions[i * 3 + 1] = 0.4 + Math.random() * 4.0;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 4.5;
+                this.dustSpeeds.push({
+                    vx: 0.001 + Math.random() * 0.0018,
+                    vy: 0.0012 + Math.random() * 0.0022
+                });
+            }
+
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            const c = document.createElement('canvas');
+            c.width = 32;
+            c.height = 32;
+            const ctx = c.getContext('2d');
+            const g = ctx.createRadialGradient(16, 16, 1, 16, 16, 15);
+            g.addColorStop(0, 'rgba(255, 248, 214, 0.9)');
+            g.addColorStop(1, 'rgba(255, 248, 214, 0)');
+            ctx.fillStyle = g;
+            ctx.fillRect(0, 0, 32, 32);
+
+            const mat = new THREE.PointsMaterial({
+                size: 0.13,
+                map: new THREE.CanvasTexture(c),
+                transparent: true,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+            this.dustPoints = new THREE.Points(geo, mat);
+            this.scene.add(this.dustPoints);
+        }
+
+        bindEvents() {
+            const parent = this.canvas.parentElement;
+            if (parent && window.ResizeObserver) {
+                this.resizeObserver = new ResizeObserver(() => this.handleResize());
+                this.resizeObserver.observe(parent);
+            }
+            window.addEventListener('resize', () => this.handleResize());
+
+            if (parent) {
+                parent.addEventListener('pointermove', (e) => {
+                    const rect = parent.getBoundingClientRect();
+                    const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+                    const ny = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+                    this.mouseTarget.x = nx;
+                    this.mouseTarget.y = -ny;
+                });
+                parent.addEventListener('pointerleave', () => {
+                    this.mouseTarget.x = 0;
+                    this.mouseTarget.y = 0;
+                });
+            }
+        }
+
+        handleResize() {
+            if (!this.renderer || !this.camera) return;
+            const parent = this.canvas.parentElement;
+            const w = parent ? parent.clientWidth : this.canvas.clientWidth;
+            const h = parent ? parent.clientHeight : this.canvas.clientHeight;
+            if (w <= 0 || h <= 0) return;
+            this.camera.aspect = w / h;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(w, h, false);
         }
 
         triggerDraw(onComplete) {
             if (this.state !== 'idle') return false;
             this.state = 'cranking';
             this.stateTimer = 0;
+            this.settleTime = 0;
             this.onBurstComplete = onComplete;
-            const colors = ['#e04f33', '#234b8c', '#f5b841', '#3f915b'];
-            this.dropBall.color = colors[Math.floor(Math.random() * colors.length)];
-            this.dropBall.visible = false;
+
+            const chosenColor = CAPSULE_COLORS[Math.floor(Math.random() * 5)];
+            if (this.dropCapsule && this.THREE) {
+                this.dropCapsule.children[0].material.color.setHex(chosenColor);
+                this.dropCapsule.visible = false;
+            }
+            this.sparkles.forEach(s => this.scene.remove(s.mesh));
             this.sparkles = [];
+
             this.audio.playCrank();
             return true;
         }
 
-        spawnSparkles(cx, cy) {
-            const cols = ['#ffe394', '#f5b841', '#ff8566', '#ffffff', '#6cc78a'];
+        spawnSparkles(worldPos) {
+            const THREE = this.THREE;
+            const cols = [0xffe394, 0xf5b841, 0xff8566, 0xffffff, 0x6cc78a];
             for (let i = 0; i < 24; i++) {
-                const angle = (Math.PI * 2 * i) / 24 + Math.random() * 0.2;
-                const speed = 0.8 + Math.random() * 2.1;
+                const mesh = new THREE.Mesh(
+                    new THREE.OctahedronGeometry(0.055, 0),
+                    new THREE.MeshBasicMaterial({ color: cols[i % cols.length], transparent: true, opacity: 1 })
+                );
+                mesh.position.copy(worldPos);
+                const ang = (Math.PI * 2 * i) / 24 + Math.random() * 0.25;
+                const spd = 0.03 + Math.random() * 0.045;
+                this.scene.add(mesh);
                 this.sparkles.push({
-                    x: cx,
-                    y: cy,
-                    vx: Math.cos(angle) * speed,
-                    vy: Math.sin(angle) * speed - 0.6,
-                    life: 1,
-                    color: cols[i % cols.length],
-                    size: Math.random() > 0.5 ? 2 : 1
+                    mesh,
+                    vel: new THREE.Vector3(Math.cos(ang) * spd, 0.04 + Math.random() * 0.05, Math.sin(ang) * spd),
+                    life: 1
                 });
+            }
+        }
+
+        updateCapsules(dt, isCranking) {
+            const THREE = this.THREE;
+            const factor = dt / 16.67;
+            const minDist = this.capsuleRadius * 2.0;
+
+            for (const c of this.capsules) {
+                const pos = c.mesh.position;
+                if (isCranking) {
+                    c.vel.x += (-pos.z * 0.014 + (Math.random() - 0.5) * 0.014) * factor;
+                    c.vel.z += (pos.x * 0.014 + (Math.random() - 0.5) * 0.014) * factor;
+                    const pulse = Math.sin(this.elapsed * 0.013 + c.phase);
+                    if (pos.y < -0.25 && pulse > 0.25) {
+                        c.vel.y += (0.014 + Math.random() * 0.016) * factor;
+                    } else {
+                        c.vel.y -= 0.013 * factor;
+                    }
+                    c.vel.multiplyScalar(0.94);
+                    c.mesh.rotation.x += c.rotVel.x * factor;
+                    c.mesh.rotation.y += c.rotVel.y * factor;
+                    c.mesh.rotation.z += c.rotVel.z * factor;
+                } else if (this.settleTime > 0) {
+                    c.vel.y -= 0.012 * factor;
+                    c.vel.multiplyScalar(0.88);
+                    pos.lerp(c.restPos, 0.06 * factor);
+                } else {
+                    continue;
+                }
+
+                pos.addScaledVector(c.vel, factor);
+
+                // 嚴格球內鉗制：絕不穿出玻璃外殼或頂蓋
+                const dist = pos.length();
+                if (dist > this.safeRadius) {
+                    pos.setLength(this.safeRadius);
+                    const normal = pos.clone().normalize();
+                    const outDot = c.vel.dot(normal);
+                    if (outDot > 0) c.vel.addScaledVector(normal, -1.55 * outDot);
+                }
+                if (pos.y < -0.74) {
+                    pos.y = -0.74;
+                    if (c.vel.y < 0) c.vel.y *= -0.35;
+                }
+                if (pos.y > 0.65) {
+                    pos.y = 0.65;
+                    if (c.vel.y > 0) c.vel.y *= -0.35;
+                }
+            }
+
+            if (isCranking || this.settleTime > 0) {
+                for (let i = 0; i < this.capsules.length; i++) {
+                    for (let j = i + 1; j < this.capsules.length; j++) {
+                        const p1 = this.capsules[i].mesh.position;
+                        const p2 = this.capsules[j].mesh.position;
+                        const delta = new THREE.Vector3().subVectors(p2, p1);
+                        const d = delta.length();
+                        if (d > 0.0001 && d < minDist) {
+                            delta.normalize().multiplyScalar((minDist - d) * 0.45);
+                            p1.sub(delta);
+                            p2.add(delta);
+                            if (p1.length() > this.safeRadius) p1.setLength(this.safeRadius);
+                            if (p2.length() > this.safeRadius) p2.setLength(this.safeRadius);
+                        }
+                    }
+                }
             }
         }
 
         update(dt) {
             this.elapsed += dt;
 
-            for (const m of this.dustMotes) {
-                m.x += m.speedX;
-                m.y += m.speedY;
-                if (m.y < 0) m.y = LOGICAL_H;
-                if (m.x > LOGICAL_W) m.x = 0;
+            // 微幅滑鼠視角視差
+            this.mouseCurrent.x += (this.mouseTarget.x - this.mouseCurrent.x) * 0.06;
+            this.mouseCurrent.y += (this.mouseTarget.y - this.mouseCurrent.y) * 0.06;
+            this.camera.position.set(
+                this.baseCamPos.x + this.mouseCurrent.x * 0.22,
+                this.baseCamPos.y + this.mouseCurrent.y * 0.11,
+                this.baseCamPos.z
+            );
+            this.camera.lookAt(this.camLookAt);
+
+            // 燈籠微風輕晃
+            for (const s of this.swayables) {
+                s.obj.rotation[s.axis] = Math.sin(this.elapsed * s.speed + s.phase) * s.amp;
             }
 
+            // 漂浮金色微塵
+            if (this.dustPoints) {
+                const posAttr = this.dustPoints.geometry.getAttribute('position');
+                const arr = posAttr.array;
+                for (let i = 0; i < this.dustSpeeds.length; i++) {
+                    arr[i * 3] += this.dustSpeeds[i].vx;
+                    arr[i * 3 + 1] += this.dustSpeeds[i].vy;
+                    if (arr[i * 3 + 1] > 4.4) arr[i * 3 + 1] = 0.4;
+                    if (arr[i * 3] > 4.0) arr[i * 3] = -4.0;
+                }
+                posAttr.needsUpdate = true;
+            }
+
+            // 爆裂星光更新
             for (let i = this.sparkles.length - 1; i >= 0; i--) {
-                const s = this.sparkles[i];
-                s.x += s.vx;
-                s.y += s.vy;
-                s.vy += 0.05;
-                s.life -= 0.025;
-                if (s.life <= 0) this.sparkles.splice(i, 1);
+                const sp = this.sparkles[i];
+                sp.mesh.position.add(sp.vel);
+                sp.vel.y -= 0.0022;
+                sp.mesh.rotation.y += 0.12;
+                sp.life -= 0.024;
+                sp.mesh.material.opacity = Math.max(0, sp.life);
+                if (sp.life <= 0) {
+                    this.scene.remove(sp.mesh);
+                    this.sparkles.splice(i, 1);
+                }
             }
 
             this.stateTimer += dt;
+            if (this.settleTime > 0) this.settleTime = Math.max(0, this.settleTime - dt);
 
             if (this.state === 'cranking') {
-                this.crankAngle += dt * 0.011;
-                this.shakeOffset.x = Math.round(Math.sin(this.stateTimer * 0.06) * 1.5);
-                this.shakeOffset.y = Math.round(Math.cos(this.stateTimer * 0.08) * 1);
-
-                for (const b of this.domeBalls) {
-                    b.x = b.baseX + Math.sin(this.stateTimer * 0.02 + b.phase) * 5;
-                    b.y = b.baseY - Math.abs(Math.cos(this.stateTimer * 0.025 + b.phase)) * 11;
-                }
+                // 正面 (+Z) 旋鈕在機台正面平面內順時針旋轉
+                this.knobGroup.rotation.z -= dt * 0.0095;
+                this.machineGroup.position.x = Math.sin(this.stateTimer * 0.065) * 0.03;
+                this.machineGroup.position.z = 0.25 + Math.cos(this.stateTimer * 0.075) * 0.02;
+                this.updateCapsules(dt, true);
 
                 if (this.stateTimer >= 1350) {
                     this.state = 'dropping';
                     this.stateTimer = 0;
-                    this.shakeOffset = { x: 0, y: 0 };
-                    this.dropBall.visible = true;
-                    this.dropBall.x = 0;
-                    this.dropBall.y = 0;
-                    this.dropBall.z = 16;
+                    this.settleTime = 950;
+                    this.machineGroup.position.set(0, 0, 0.25);
+                    this.dropCapsule.visible = true;
+                    this.dropCapsule.position.set(0, 0.58, 0.74);
                     this.audio.playDrop();
                 }
             } else if (this.state === 'dropping') {
-                const t = Math.min(1, this.stateTimer / 850);
-                this.dropBall.y = t * 30;
+                this.updateCapsules(dt, false);
+                const t = Math.min(1, this.stateTimer / 880);
+                this.chuteFlapPivot.rotation.x = t < 0.25 ? -Math.sin((t / 0.25) * Math.PI) * 0.95 : 0;
+
+                this.dropCapsule.position.z = 0.74 + t * 1.08;
+                this.dropCapsule.rotation.x += dt * 0.009;
                 if (t < 0.45) {
                     const p = t / 0.45;
-                    this.dropBall.z = 16 * (1 - p * p);
+                    this.dropCapsule.position.y = 0.58 - p * p * 0.32;
                 } else if (t < 0.75) {
                     const p = (t - 0.45) / 0.3;
-                    this.dropBall.z = Math.sin(p * Math.PI) * 9;
+                    this.dropCapsule.position.y = 0.26 + Math.sin(p * Math.PI) * 0.3;
                 } else {
                     const p = (t - 0.75) / 0.25;
-                    this.dropBall.z = Math.sin(p * Math.PI) * 4;
+                    this.dropCapsule.position.y = 0.26 + Math.sin(p * Math.PI) * 0.12;
                 }
 
                 if (this.stateTimer >= 900) {
                     this.state = 'burst';
                     this.stateTimer = 0;
-                    const ballPos = isoProject(0 + this.dropBall.x, 18 + this.dropBall.y, 4, 120, 122);
-                    this.spawnSparkles(ballPos.x, ballPos.y);
+                    this.chuteFlapPivot.rotation.x = 0;
+                    const worldPos = this.dropCapsule.getWorldPosition(new this.THREE.Vector3());
+                    this.spawnSparkles(worldPos);
                     this.audio.playFanfare();
                 }
             } else if (this.state === 'burst') {
+                this.updateCapsules(dt, false);
                 if (this.stateTimer >= 420) {
                     const cb = this.onBurstComplete;
                     this.onBurstComplete = null;
                     this.state = 'idle';
-                    this.dropBall.visible = false;
+                    this.dropCapsule.visible = false;
                     if (cb) cb();
                 }
             } else {
-                for (const b of this.domeBalls) {
-                    b.x = b.baseX;
-                    b.y = b.baseY;
-                }
+                this.updateCapsules(dt, false);
             }
-        }
-
-        // 繪製溫暖雜貨店 45° 背景牆面、木地板與門簾
-        drawStoreBackdrop(ctx) {
-            // 暖陽米黃色背景牆
-            ctx.fillStyle = '#f2dec0';
-            ctx.fillRect(0, 0, LOGICAL_W, LOGICAL_H);
-
-            // 45度等角雜貨店紅磚/暖木磁磚地板
-            const tileSize = 18;
-            const ox = 120;
-            const oy = 66;
-            for (let gx = -6; gx <= 6; gx++) {
-                for (let gy = -6; gy <= 6; gy++) {
-                    const p0 = isoProject(gx * tileSize, gy * tileSize, 0, ox, oy);
-                    const p1 = isoProject((gx + 1) * tileSize, gy * tileSize, 0, ox, oy);
-                    const p2 = isoProject((gx + 1) * tileSize, (gy + 1) * tileSize, 0, ox, oy);
-                    const p3 = isoProject(gx * tileSize, (gy + 1) * tileSize, 0, ox, oy);
-
-                    const isEven = (gx + gy) % 2 === 0;
-                    const col = isEven ? '#e3c096' : '#cfa272';
-                    drawIsoPolygon(ctx, [p0, p1, p2, p3], col, '#b88856');
-                }
-            }
-
-            // 後方左側木質牆板 (45度壁面)
-            const wL0 = isoProject(-95, -62, 0, ox, oy);
-            const wL1 = isoProject(10, -62, 0, ox, oy);
-            const wL2 = isoProject(10, -62, 95, ox, oy);
-            const wL3 = isoProject(-95, -62, 95, ox, oy);
-            drawIsoPolygon(ctx, [wL0, wL1, wL2, wL3], '#e8cfa6', '#7a451d');
-
-            // 後方右側木質牆板
-            const wR0 = isoProject(10, -62, 0, ox, oy);
-            const wR1 = isoProject(95, -62, 0, ox, oy);
-            const wR2 = isoProject(95, -62, 95, ox, oy);
-            const wR3 = isoProject(10, -62, 95, ox, oy);
-            drawIsoPolygon(ctx, [wR0, wR1, wR2, wR3], '#d9b98b', '#7a451d');
-
-            // 牆面木頭腰板 (下半部深木色)
-            const dL0 = isoProject(-95, -62, 0, ox, oy);
-            const dL1 = isoProject(95, -62, 0, ox, oy);
-            const dL2 = isoProject(95, -62, 24, ox, oy);
-            const dL3 = isoProject(-95, -62, 24, ox, oy);
-            drawIsoPolygon(ctx, [dL0, dL1, dL2, dL3], '#9c5c2e', '#3a2214');
-
-            // 機台下方復古紅金編織墊
-            const r = 30;
-            const rp0 = isoProject(-r, -r + 12, 0.5, 120, 122);
-            const rp1 = isoProject(r, -r + 12, 0.5, 120, 122);
-            const rp2 = isoProject(r, r + 16, 0.5, 120, 122);
-            const rp3 = isoProject(-r, r + 16, 0.5, 120, 122);
-            drawIsoPolygon(ctx, [rp0, rp1, rp2, rp3], '#b83227', '#f5b841');
-        }
-
-        // 繪製雜貨店旁邊的背景物 (木櫃、糖果罐、飲料箱、盆栽、暖燈籠)
-        drawStoreProps(ctx) {
-            const ox = 120;
-            const oy = 122;
-
-            // --- 左側背景物：復古木頭零食櫃 + 玻璃糖果罐 ---
-            drawIsoBox(ctx, ox, oy, -68, -42, 0, 26, 20, 28, '#d99b52', '#b87333', '#7a451d');
-            // 櫃子上的兩個玻璃糖果罐
-            const jar1 = isoProject(-58, -32, 28, ox, oy);
-            ctx.fillStyle = 'rgba(180, 230, 245, 0.75)';
-            ctx.fillRect(jar1.x - 5, jar1.y - 12, 10, 12);
-            ctx.strokeStyle = '#3a2214';
-            ctx.strokeRect(jar1.x - 5.5, jar1.y - 12.5, 11, 13);
-            ctx.fillStyle = '#e04f33';
-            ctx.fillRect(jar1.x - 4, jar1.y - 14, 8, 2); // 紅蓋子
-            // 罐內彩色糖果像素
-            ctx.fillStyle = '#f5b841'; ctx.fillRect(jar1.x - 3, jar1.y - 5, 2, 2);
-            ctx.fillStyle = '#e04f33'; ctx.fillRect(jar1.x, jar1.y - 7, 2, 2);
-            ctx.fillStyle = '#3f915b'; ctx.fillRect(jar1.x + 1, jar1.y - 4, 2, 2);
-
-            const jar2 = isoProject(-45, -34, 28, ox, oy);
-            ctx.fillStyle = 'rgba(180, 230, 245, 0.75)';
-            ctx.fillRect(jar2.x - 4, jar2.y - 10, 8, 10);
-            ctx.strokeStyle = '#3a2214';
-            ctx.strokeRect(jar2.x - 4.5, jar2.y - 10.5, 9, 11);
-            ctx.fillStyle = '#234b8c';
-            ctx.fillRect(jar2.x - 3, jar2.y - 12, 6, 2); // 藍蓋子
-            ctx.fillStyle = '#ff85a1'; ctx.fillRect(jar2.x - 2, jar2.y - 5, 2, 2);
-            ctx.fillStyle = '#ffe394'; ctx.fillRect(jar2.x + 1, jar2.y - 6, 2, 2);
-
-            // 左前方小木箱
-            drawIsoBox(ctx, ox, oy, -72, -10, 0, 16, 16, 12, '#e3b276', '#c48a47', '#8a5422');
-
-            // --- 右側背景物：飲料木箱 + 彈珠汽水瓶 + 綠色盆栽 ---
-            drawIsoBox(ctx, ox, oy, 40, -34, 0, 24, 18, 14, '#c48a47', '#9c5c2e', '#6e3d1a');
-            // 箱子裡的彈珠汽水 / 玻璃瓶
-            const bottles = [
-                isoProject(46, -26, 14, ox, oy),
-                isoProject(52, -26, 14, ox, oy),
-                isoProject(58, -26, 14, ox, oy)
-            ];
-            bottles.forEach((bp, i) => {
-                ctx.fillStyle = i === 1 ? '#3f915b' : '#4a8be8';
-                ctx.fillRect(bp.x - 2, bp.y - 9, 4, 9);
-                ctx.fillStyle = '#fff8eb';
-                ctx.fillRect(bp.x - 1, bp.y - 11, 2, 2);
-            });
-
-            // 右前方陶土盆栽
-            drawIsoBox(ctx, ox, oy, 48, 2, 0, 14, 14, 12, '#c9623b', '#a84725', '#782e15');
-            const plantBase = isoProject(55, 9, 12, ox, oy);
-            ctx.fillStyle = '#26633b';
-            ctx.fillRect(plantBase.x - 7, plantBase.y - 12, 14, 10);
-            ctx.fillStyle = '#3f915b';
-            ctx.fillRect(plantBase.x - 5, plantBase.y - 16, 10, 8);
-            ctx.fillStyle = '#6cc78a';
-            ctx.fillRect(plantBase.x - 3, plantBase.y - 18, 5, 4);
-
-            // 右上角微晃的雜貨店暖黃紙燈籠
-            const sway = Math.round(Math.sin(this.elapsed * 0.0025) * 1.5);
-            const lx = 208 + sway;
-            const ly = 26;
-            ctx.strokeStyle = '#3a2214';
-            ctx.beginPath();
-            ctx.moveTo(208, 0);
-            ctx.lineTo(lx, ly - 10);
-            ctx.stroke();
-            ctx.fillStyle = '#f5b841';
-            ctx.fillRect(lx - 8, ly - 9, 16, 18);
-            ctx.strokeStyle = '#3a2214';
-            ctx.strokeRect(lx - 8.5, ly - 9.5, 17, 19);
-            ctx.fillStyle = '#e04f33';
-            ctx.fillRect(lx - 5, ly - 11, 10, 2);
-            ctx.fillRect(lx - 5, ly + 9, 10, 2);
-            // 燈籠暖光點
-            ctx.fillStyle = '#fff5cc';
-            ctx.fillRect(lx - 4, ly - 5, 4, 8);
-        }
-
-        drawMachine(ctx) {
-            const ox = 120 + this.shakeOffset.x;
-            const oy = 122 + this.shakeOffset.y;
-
-            // 地面投射陰影
-            const sp0 = isoProject(-16, -16, 0.6, 126, 125);
-            const sp1 = isoProject(22, -16, 0.6, 126, 125);
-            const sp2 = isoProject(22, 22, 0.6, 126, 125);
-            const sp3 = isoProject(-16, 22, 0.6, 126, 125);
-            drawIsoPolygon(ctx, [sp0, sp1, sp2, sp3], 'rgba(58, 34, 20, 0.35)', null);
-
-            // 1. 底座
-            drawIsoBox(ctx, ox, oy, -18, -18, 0, 36, 36, 8, '#6e503c', '#523828', '#382418');
-
-            // 2. 下層主機身 (經典復古紅)
-            drawIsoBox(ctx, ox, oy, -16, -16, 8, 32, 32, 34, '#ff7452', '#e04f33', '#a83019');
-
-            // 出蛋口
-            const ch0 = isoProject(-6, 16.2, 10, ox, oy);
-            const ch1 = isoProject(6, 16.2, 10, ox, oy);
-            const ch2 = isoProject(6, 16.2, 21, ox, oy);
-            const ch3 = isoProject(-6, 16.2, 21, ox, oy);
-            drawIsoPolygon(ctx, [ch0, ch1, ch2, ch3], '#2c1a0e', '#f5b841');
-
-            // 米白金屬銘牌
-            const plate0 = isoProject(-11, 16.2, 25, ox, oy);
-            const plate1 = isoProject(11, 16.2, 25, ox, oy);
-            const plate2 = isoProject(11, 16.2, 37, ox, oy);
-            const plate3 = isoProject(-11, 16.2, 37, ox, oy);
-            drawIsoPolygon(ctx, [plate0, plate1, plate2, plate3], '#fbf4e4', '#3a2214');
-
-            // 旋轉把手
-            const knobCenter = isoProject(0, 17, 31, ox, oy);
-            ctx.fillStyle = '#f5b841';
-            ctx.fillRect(knobCenter.x - 4, knobCenter.y - 4, 8, 8);
-            ctx.strokeStyle = '#3a2214';
-            ctx.strokeRect(knobCenter.x - 4.5, knobCenter.y - 4.5, 9, 9);
-
-            const dx = Math.round(Math.cos(this.crankAngle) * 5);
-            const dy = Math.round(Math.sin(this.crankAngle) * 3);
-            ctx.strokeStyle = '#3a2214';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(knobCenter.x - dx, knobCenter.y - dy);
-            ctx.lineTo(knobCenter.x + dx, knobCenter.y + dy);
-            ctx.stroke();
-            ctx.strokeStyle = '#ffe394';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(knobCenter.x - dx, knobCenter.y - dy);
-            ctx.lineTo(knobCenter.x + dx, knobCenter.y + dy);
-            ctx.stroke();
-
-            // 3. 金色腰帶環
-            drawIsoBox(ctx, ox, oy, -17, -17, 42, 34, 34, 5, '#ffe08a', '#f5b841', '#c48414');
-
-            // 4. 玻璃展示櫃
-            drawIsoBox(ctx, ox, oy, -15, -15, 47, 30, 30, 34, 'rgba(215,245,255,0.45)', 'rgba(170,220,245,0.32)', 'rgba(120,175,210,0.35)', '#4a6b82');
-
-            const domeCenter = isoProject(0, 0, 56, ox, oy);
-            for (const b of this.domeBalls) {
-                drawPixelCapsule(
-                    ctx,
-                    Math.round(domeCenter.x + b.x),
-                    Math.round(domeCenter.y + b.y),
-                    3,
-                    b.color
-                );
-            }
-
-            // 玻璃反光
-            const gl0 = isoProject(-12, 15.2, 52, ox, oy);
-            const gl1 = isoProject(-9, 15.2, 76, ox, oy);
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(gl0.x, gl0.y);
-            ctx.lineTo(gl1.x, gl1.y);
-            ctx.stroke();
-
-            // 5. 頂蓋
-            drawIsoBox(ctx, ox, oy, -16, -16, 81, 32, 32, 6, '#ff7452', '#e04f33', '#a83019');
-            drawIsoBox(ctx, ox, oy, -7, -7, 87, 14, 14, 4, '#ffe08a', '#f5b841', '#c48414');
-        }
-
-        drawDropBall(ctx) {
-            if (!this.dropBall.visible) return;
-            const pos = isoProject(0 + this.dropBall.x, 18 + this.dropBall.y, this.dropBall.z, 120, 122);
-            const shadowPos = isoProject(0 + this.dropBall.x, 18 + this.dropBall.y, 0.5, 120, 122);
-            ctx.fillStyle = 'rgba(58, 34, 20, 0.35)';
-            ctx.fillRect(shadowPos.x - 5, shadowPos.y - 2, 10, 4);
-            drawPixelCapsule(ctx, pos.x, pos.y - 4, 6, this.dropBall.color);
-        }
-
-        drawHD2DEffects(ctx) {
-            for (const m of this.dustMotes) {
-                ctx.fillStyle = `rgba(255, 248, 215, ${m.alpha})`;
-                ctx.fillRect(Math.round(m.x), Math.round(m.y), m.size, m.size);
-            }
-            for (const s of this.sparkles) {
-                ctx.globalAlpha = Math.max(0, s.life);
-                ctx.fillStyle = s.color;
-                ctx.fillRect(Math.round(s.x), Math.round(s.y), s.size, s.size);
-            }
-            ctx.globalAlpha = 1;
         }
 
         loop(now) {
@@ -510,14 +1430,7 @@
             this.lastTime = now;
 
             this.update(dt);
-
-            const ctx = this.ctx;
-            this.drawStoreBackdrop(ctx);
-            this.drawStoreProps(ctx);
-            this.drawMachine(ctx);
-            this.drawDropBall(ctx);
-            this.drawHD2DEffects(ctx);
-
+            this.renderer.render(this.scene, this.camera);
             requestAnimationFrame(this.loop);
         }
     }

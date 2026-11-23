@@ -244,30 +244,37 @@ body {
     width: 100%;
     aspect-ratio: 4 / 3;
     min-height: 400px;
-    background: #d8b589;
+    background: #efe0c4;
     border: 3px solid var(--panel-border);
     overflow: hidden;
-    box-shadow: inset 0 0 36px rgba(58, 34, 20, 0.35);
+    box-shadow: inset 0 0 36px rgba(58, 34, 20, 0.25);
 }
 
 #gacha-canvas {
     width: 100%;
     height: 100%;
     display: block;
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
     cursor: pointer;
 }
 
-/* HD-2D 暖陽體積光與柔和暗角 */
+/* 溫暖水彩紙質疊層、暖陽暈染與柔和暗角 */
 .hd2d-lighting {
     position: absolute;
     inset: 0;
     pointer-events: none;
     background:
-        linear-gradient(125deg, rgba(255, 240, 190, 0.24) 0%, rgba(255, 214, 130, 0.08) 40%, transparent 68%),
-        radial-gradient(ellipse at center, transparent 60%, rgba(58, 34, 20, 0.35) 100%);
+        linear-gradient(128deg, rgba(255, 240, 195, 0.10) 0%, rgba(255, 224, 160, 0.04) 40%, transparent 68%),
+        radial-gradient(ellipse at center, transparent 62%, rgba(74, 44, 26, 0.22) 100%);
     z-index: 2;
+}
+
+.hd2d-lighting::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.09;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
 }
 
 .stage-hint {
@@ -436,11 +443,10 @@ body {
 .group-chip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     background: #efe2c8;
     border: 2px solid var(--panel-border);
-    padding: 6px 10px;
-    cursor: pointer;
+    padding: 4px 6px 4px 8px;
     font-family: var(--font-pixel);
     font-size: 0.95rem;
     color: var(--ink-muted);
@@ -455,9 +461,99 @@ body {
     box-shadow: inset 0 2px 0 #ffe394, 2px 2px 0 var(--panel-border);
 }
 
+.group-chip.inspecting {
+    outline: 2px solid var(--gacha-red);
+    outline-offset: 1px;
+}
+
 .group-chip input {
     accent-color: var(--gacha-red);
     cursor: pointer;
+    margin: 0;
+}
+
+.group-expand-btn {
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 2px 4px;
+    line-height: 1.1;
+}
+
+.group-expand-btn:hover {
+    text-decoration: underline;
+}
+
+/* 展開分組名單排除面板 */
+.group-roster-panel {
+    margin-top: 12px;
+    background: #fff9ec;
+    border: 2px solid var(--panel-border);
+    padding: 10px 12px;
+    box-shadow: inset 0 2px 0 #fffdf7, 2px 2px 0 rgba(58, 34, 20, 0.22);
+}
+
+.roster-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: var(--font-pixel);
+    font-size: 0.86rem;
+    color: var(--gacha-blue-dark);
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--wood-light);
+}
+
+.roster-close-btn {
+    background: #efe2c8;
+    color: var(--ink-dark);
+    border: 1px solid var(--panel-border);
+    font-family: var(--font-pixel);
+    font-size: 0.78rem;
+    padding: 1px 6px;
+    cursor: pointer;
+}
+
+.roster-close-btn:hover {
+    background: var(--gacha-red);
+    color: #fff;
+}
+
+.student-pill-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.student-pill {
+    font-family: var(--font-ui);
+    font-size: 0.84rem;
+    font-weight: 700;
+    background: #ffffff;
+    color: var(--ink-dark);
+    border: 2px solid var(--panel-border);
+    padding: 4px 9px;
+    cursor: pointer;
+    box-shadow: 1px 1px 0 var(--panel-border);
+    transition: background 0.1s ease, transform 0.08s ease;
+}
+
+.student-pill:hover {
+    background: #ffe9b8;
+    transform: translateY(-1px);
+}
+
+.student-pill.is-excluded {
+    background: #e2d4be;
+    color: #7c624c;
+    border-style: dashed;
+    text-decoration: line-through;
+    box-shadow: none;
 }
 
 /* 抽籤數量與按鈕 */
@@ -511,7 +607,32 @@ body {
     display: grid;
     grid-template-columns: 1.5fr 1fr;
     gap: 10px;
-    margin-top: 14px;
+    margin-top: 12px;
+}
+
+.repeat-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 7px 10px;
+    background: #f5ead4;
+    border: 2px solid var(--panel-border);
+    box-shadow: 2px 2px 0 rgba(58, 34, 20, 0.18);
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--ink-dark);
+    cursor: pointer;
+    user-select: none;
+}
+
+.repeat-toggle input {
+    accent-color: var(--gacha-red);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    margin: 0;
 }
 
 /* 歷史紀錄 */
@@ -534,7 +655,7 @@ body {
     background: #fffdf7;
     color: var(--ink-dark);
     border: 2px solid var(--panel-border);
-    padding: 5px 10px;
+    padding: 4px 6px 4px 9px;
     font-size: 0.9rem;
     font-weight: 700;
     box-shadow: 2px 2px 0 var(--panel-border);
@@ -551,6 +672,23 @@ body {
     font-size: 0.75rem;
     padding: 1px 5px;
     border: 1px solid var(--panel-border);
+}
+
+.h-remove-btn {
+    background: transparent;
+    border: none;
+    color: var(--ink-muted);
+    font-family: var(--font-pixel);
+    font-size: 0.85rem;
+    line-height: 1;
+    padding: 2px 4px;
+    cursor: pointer;
+    margin-left: 1px;
+}
+
+.h-remove-btn:hover {
+    color: var(--gacha-red);
+    background: rgba(224, 79, 51, 0.12);
 }
 
 @keyframes popIn {

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>平興數枝扭蛋機 | 復古雜貨店 45° HD-2D 像素抽籤機</title>
-    <meta name="description" content="平興國中數理資優班 復古雜貨店 45度 HD-2D 像素風格扭蛋抽籤機">
+    <title>平興數枝扭蛋機</title>
+    <meta name="description" content="平興國中數理資優班 錢天堂風傳統柑仔店 溫暖水彩 3D 扭蛋抽籤機">
     <link rel="stylesheet" href="gacha-style.css">
 </head>
 <body>
@@ -14,7 +14,6 @@
         <div class="brand-badge" aria-hidden="true">🏮</div>
         <div>
             <h1 class="brand-title">平興數枝扭蛋機</h1>
-            <div class="brand-sub">復古柑仔店 • 45° HD-2D PIXEL GACHA</div>
         </div>
     </div>
 
@@ -24,14 +23,13 @@
 </header>
 
 <main class="main-grid">
-    <!-- 左側：45度 HD-2D 復古雜貨店微縮舞台 -->
-    <section class="diorama-panel pixel-box" aria-label="45度 HD-2D 復古雜貨店扭蛋機舞台">
+    <!-- 左側：錢天堂風柑仔店 溫暖水彩 3D 微縮舞台 -->
+    <section class="diorama-panel pixel-box" aria-label="錢天堂風柑仔店 溫暖水彩 3D 扭蛋機舞台">
         <div class="diorama-viewport">
             <canvas id="gacha-canvas" title="點擊扭蛋機也可以直接抽籤！"></canvas>
             <div class="hd2d-lighting"></div>
             <div class="sunburst" id="sunburst"></div>
             <div class="stage-status-pill" id="stage-status">READY • 剩餘 0 人</div>
-            <div class="stage-hint">💡 點擊機台或右側按鈕開始抽籤</div>
 
             <!-- 保留原本的撕紙邊緣抽獎券樣式 -->
             <div class="result-reveal" id="result-reveal" role="dialog" aria-labelledby="result-title">
@@ -58,6 +56,7 @@
             </div>
 
             <div class="checkbox-group" id="group-checkboxes"></div>
+            <div class="group-roster-panel" id="group-roster-panel" hidden></div>
 
             <div class="draw-row">
                 <label for="draw-count" style="font-family: var(--font-pixel); font-size: 1rem;">抽出人數</label>
@@ -67,6 +66,11 @@
                     <button type="button" id="btn-plus" aria-label="增加人數">+</button>
                 </div>
             </div>
+
+            <label class="repeat-toggle">
+                <input type="checkbox" id="allow-repeat">
+                <span>本次可重複抽籤</span>
+            </label>
 
             <div class="action-buttons">
                 <button type="button" class="px-btn px-btn-primary" id="btn-draw">🎲 開始抽籤</button>
@@ -87,6 +91,7 @@
 </main>
 
 <script src="roster.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
 <script src="gacha-scene.js"></script>
 <script>
     (function () {
@@ -94,40 +99,134 @@
         const students = rosterInfo.students;
         const groups = new Set(students.map(s => s.group));
         let isAnimating = false;
+        let historyEntries = [];
+        let nextHistoryId = 1;
+        let activeInspectGroup = null;
 
-        // 啟動 45度 HD-2D 復古雜貨店場景
+        // 啟動 錢天堂風柑仔店 溫暖水彩 3D 場景
         const scene = new window.GachaScene('gacha-canvas');
 
         document.getElementById('roster-source-tag').textContent = `名單人數: ${students.length} 人`;
 
-        // 初始化組別勾選框
+        // 初始化組別勾選與展開名單按鈕
         const checkboxContainer = document.getElementById('group-checkboxes');
+        const groupRosterPanel = document.getElementById('group-roster-panel');
+
         Array.from(groups).sort().forEach(group => {
-            const label = document.createElement('label');
-            label.className = 'group-chip';
+            const chip = document.createElement('div');
+            chip.className = 'group-chip';
+            chip.dataset.group = group;
+
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.value = group;
             checkbox.checked = true;
+            checkbox.title = `勾選是否納入「${group}」進行抽籤`;
+            checkbox.setAttribute('aria-label', `勾選 ${group}`);
             checkbox.addEventListener('change', updateRemainingCount);
 
-            label.appendChild(checkbox);
-            label.appendChild(document.createTextNode(group));
-            checkboxContainer.appendChild(label);
+            const expandBtn = document.createElement('button');
+            expandBtn.type = 'button';
+            expandBtn.className = 'group-expand-btn';
+            expandBtn.textContent = `${group} ▾`;
+            expandBtn.title = `展開「${group}」名單以手動切換已抽／未抽`;
+            expandBtn.addEventListener('click', () => {
+                activeInspectGroup = activeInspectGroup === group ? null : group;
+                renderGroupRoster();
+            });
+
+            chip.appendChild(checkbox);
+            chip.appendChild(expandBtn);
+            checkboxContainer.appendChild(chip);
         });
+
+        function renderGroupRoster() {
+            document.querySelectorAll('#group-checkboxes .group-chip').forEach(chip => {
+                const isThis = chip.dataset.group === activeInspectGroup;
+                chip.classList.toggle('inspecting', isThis);
+                const btn = chip.querySelector('.group-expand-btn');
+                if (btn) btn.textContent = `${chip.dataset.group} ${isThis ? '▴' : '▾'}`;
+            });
+
+            if (!activeInspectGroup) {
+                groupRosterPanel.hidden = true;
+                groupRosterPanel.innerHTML = '';
+                return;
+            }
+
+            const groupStudents = students.filter(s => s.group === activeInspectGroup);
+            groupRosterPanel.hidden = false;
+            groupRosterPanel.innerHTML = '';
+
+            const header = document.createElement('div');
+            header.className = 'roster-panel-header';
+
+            const title = document.createElement('span');
+            title.textContent = `📋 ${activeInspectGroup} 名單（點擊切換已抽／未抽）`;
+
+            const closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = 'roster-close-btn';
+            closeBtn.textContent = '✕';
+            closeBtn.title = '收合名單';
+            closeBtn.addEventListener('click', () => {
+                activeInspectGroup = null;
+                renderGroupRoster();
+            });
+
+            header.appendChild(title);
+            header.appendChild(closeBtn);
+            groupRosterPanel.appendChild(header);
+
+            const listWrap = document.createElement('div');
+            listWrap.className = 'student-pill-list';
+
+            groupStudents.forEach(s => {
+                const pill = document.createElement('button');
+                pill.type = 'button';
+                pill.className = `student-pill${s.drawn ? ' is-excluded' : ''}`;
+                pill.textContent = `${s.seatNum}號 ${s.name}`;
+                pill.title = s.drawn ? '已在抽籤紀錄中，點擊移出並恢復抽籤' : '點擊加入抽籤紀錄';
+                pill.addEventListener('click', () => {
+                    if (isAnimating) return;
+                    if (!s.drawn) {
+                        s.drawn = true;
+                        if (!historyEntries.some(e => e.student === s)) {
+                            historyEntries.unshift({ id: nextHistoryId++, student: s });
+                        }
+                    } else {
+                        s.drawn = false;
+                        historyEntries = historyEntries.filter(e => e.student !== s);
+                    }
+                    renderHistory();
+                    renderGroupRoster();
+                    updateRemainingCount();
+                });
+                listWrap.appendChild(pill);
+            });
+
+            groupRosterPanel.appendChild(listWrap);
+        }
 
         function getAvailableStudents() {
             const selectedGroups = Array.from(
                 document.querySelectorAll('#group-checkboxes input:checked')
             ).map(cb => cb.value);
+            const allowRepeat = document.getElementById('allow-repeat').checked;
+            if (allowRepeat) {
+                return students.filter(s => selectedGroups.includes(s.group));
+            }
             return students.filter(s => selectedGroups.includes(s.group) && !s.drawn);
         }
 
         function updateRemainingCount() {
             const available = getAvailableStudents().length;
-            document.getElementById('remaining-count').textContent = `剩餘: ${available} 人`;
+            const allowRepeat = document.getElementById('allow-repeat').checked;
+            const countLabel = allowRepeat ? `可抽: ${available} 人（可重複）` : `剩餘: ${available} 人`;
+            const stageLabel = allowRepeat ? `READY • 可抽 ${available} 人（可重複）` : `READY • 剩餘 ${available} 人`;
+            document.getElementById('remaining-count').textContent = countLabel;
             if (!isAnimating) {
-                document.getElementById('stage-status').textContent = `READY • 剩餘 ${available} 人`;
+                document.getElementById('stage-status').textContent = stageLabel;
             }
         }
 
@@ -141,9 +240,14 @@
                 return;
             }
 
+            const allowRepeat = document.getElementById('allow-repeat').checked;
             const availableStudents = getAvailableStudents();
             if (availableStudents.length === 0) {
-                alert('目前選擇的分組已經沒有未抽出的學生了！請勾選其他組別或清除紀錄。');
+                alert(
+                    allowRepeat
+                        ? '請至少勾選一個包含學生的分組！'
+                        : '目前選擇的分組已經沒有未抽出的學生了！請勾選其他組別或清除紀錄。'
+                );
                 return;
             }
 
@@ -207,30 +311,83 @@
             });
         }
 
-        function addToHistory(winners) {
+        function renderHistory() {
             const historyList = document.getElementById('history-list');
-            const emptyHint = historyList.querySelector('.history-empty');
-            if (emptyHint) emptyHint.remove();
+            historyList.innerHTML = '';
 
-            winners.forEach(w => {
+            if (historyEntries.length === 0) {
+                const emptyDiv = document.createElement('div');
+                emptyDiv.className = 'history-empty';
+                emptyDiv.textContent = '尚未抽出任何學生';
+                historyList.appendChild(emptyDiv);
+                return;
+            }
+
+            historyEntries.forEach(entry => {
+                const s = entry.student;
                 const item = document.createElement('div');
                 item.className = 'history-item';
-                item.innerHTML = `<span class="h-tag">${w.group}</span><span>${w.name}</span>`;
-                historyList.insertBefore(item, historyList.firstChild);
+
+                const tag = document.createElement('span');
+                tag.className = 'h-tag';
+                tag.textContent = s.group;
+                item.appendChild(tag);
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = s.name;
+                item.appendChild(nameSpan);
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'h-remove-btn';
+                removeBtn.textContent = '✕';
+                removeBtn.title = `將 ${s.name} 移出紀錄並恢復可抽籤`;
+                removeBtn.setAttribute('aria-label', `將 ${s.name} 移出紀錄`);
+                removeBtn.addEventListener('click', () => {
+                    if (isAnimating) return;
+                    historyEntries = historyEntries.filter(e => e.id !== entry.id);
+                    if (!historyEntries.some(e => e.student === s)) {
+                        s.drawn = false;
+                    }
+                    renderHistory();
+                    renderGroupRoster();
+                    updateRemainingCount();
+                });
+                item.appendChild(removeBtn);
+
+                historyList.appendChild(item);
             });
+        }
+
+        function addToHistory(winners) {
+            const allowRepeat = document.getElementById('allow-repeat').checked;
+            winners.forEach(w => {
+                const target = students.find(
+                    s => s.name === w.name && s.group === w.group && s.classNum === w.classNum && s.seatNum === w.seatNum
+                ) || w;
+                if (allowRepeat || !historyEntries.some(e => e.student === target)) {
+                    historyEntries.unshift({ id: nextHistoryId++, student: target });
+                }
+            });
+            renderHistory();
+            renderGroupRoster();
         }
 
         function clearHistory() {
             if (isAnimating) return;
             if (confirm('確定要清除所有抽籤紀錄嗎？這將重置所有學生的抽籤狀態。')) {
                 students.forEach(s => { s.drawn = false; });
-                document.getElementById('history-list').innerHTML = '<div class="history-empty">尚未抽出任何學生</div>';
+                historyEntries = [];
+                renderHistory();
+                renderGroupRoster();
                 document.getElementById('result-reveal').classList.remove('show');
                 document.getElementById('sunburst').style.display = 'none';
                 document.getElementById('drawn-names').style.animation = 'none';
                 updateRemainingCount();
             }
         }
+
+        document.getElementById('allow-repeat').addEventListener('change', updateRemainingCount);
 
         document.getElementById('btn-draw').addEventListener('click', drawLots);
         document.getElementById('gacha-canvas').addEventListener('click', drawLots);
